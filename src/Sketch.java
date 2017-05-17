@@ -1,22 +1,20 @@
 import processing.core.PApplet;
 import processing.core.*;
-
 import javax.swing.*;
-import java.awt.*;
 import java.io.*;
 import java.net.*;
 
 /**
  * Created by Nicholas on 2017-05-12.
+ *
  */
 public class Sketch extends PApplet {
+    private static final int DEFAULT_PORT = 4000;
 
     private ServerSocket serverSocket;
     private Socket clientSocket;
     private DataInputStream reader;
     private DataOutputStream writer;
-    private int portNumber = 4000;
-    private char lastKey = 't';
     private PImage frame;
     private boolean connected = false;
 
@@ -30,66 +28,69 @@ public class Sketch extends PApplet {
     }
 
     public void setup() {
-        frameRate(15);
+        frameRate(30);
         background(0);
-        textSize(50);
-        text("Not connected", 10, 50);
+        setupServer();
     }
 
     public void draw() {
         if (connected) {
             updateFrame();
         } else {
-            background(0);
-            textSize(50);
-            text("Not connected", 10, 50);
             connect();
         }
     }
 
-    public void updateFrame() {
+    private void updateFrame() {
+        StringBuilder header = new StringBuilder();
+        int bytesReceived = 0;
         byte[] bytes = null;
-        int byteCount = 0;
 
         try {
-            Byte ch = reader.readByte();
-            String header = "";
+            //parse byte count from header
+            byte ch = reader.readByte();
             while (ch != '\n') {
-                header += parseChar(ch);
+                header.append(parseChar(ch));
                 ch = reader.readByte();
             }
-            byteCount = Integer.parseInt(header);
+            int byteCount = Integer.parseInt(header.toString());
 
+            //fill array with image data
             bytes = new byte[byteCount];
-
-            int bytesReceived = 0;
             while (bytesReceived < byteCount) {
                 int result = reader.read(bytes, bytesReceived, byteCount - bytesReceived);
                 if (result > 0) {
                     bytesReceived += result;
                 } else {
-                    System.out.println("end of file");
-                    bytesReceived = byteCount;
+                    throw new IOException("Disconnected: stream ended");
                 }
             }
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            System.out.println("Disconnected: "+ e.getMessage());
             connected = false;
         }
 
+        //create and display image
         if (bytes != null) {
-            Image awtImage = new ImageIcon(bytes).getImage();
-            frame = new PImage(awtImage);
+            frame = new PImage(new ImageIcon(bytes).getImage());
             image(frame, 0, 0, 640, 480);
         }
     }
 
-    public void connect() {
-        System.out.println("Server.java: waiting for connection");
+    private void setupServer() {
 
-        //accept
+        //JOptionPane prompt = new JOptionPane();
+        //portNumber = prompt.
         try {
-            serverSocket = new ServerSocket(portNumber);
+            serverSocket = new ServerSocket(DEFAULT_PORT);
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    private void connect() {
+        System.out.println("Server.java: waiting for connection");
+        try {
             clientSocket = serverSocket.accept();
             reader = new DataInputStream(clientSocket.getInputStream());
             writer = new DataOutputStream(clientSocket.getOutputStream());
@@ -104,6 +105,9 @@ public class Sketch extends PApplet {
 
 
 /*
+
+textSize(50);
+        text("Not connected", 10, 50);
 
 /noFill();
         //rect(width/3, height/3, (width/3),(height/3));
