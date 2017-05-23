@@ -1,8 +1,9 @@
 import processing.core.PApplet;
 import processing.core.*;
-import javax.swing.*;
 import java.io.*;
 import java.net.*;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by Nicholas on 2017-05-12.
@@ -14,9 +15,14 @@ public class Sketch extends PApplet {
     private ServerSocket serverSocket;
     private Socket clientSocket;
     private DataInputStream reader;
-    private DataOutputStream writer;
+    private BufferedWriter writer;
     private PImage frame;
     private boolean connected = false;
+    private char lastKey = 'z';
+    private char[] commands = {'f', 'b', 'l', 'r', 'p', 'u', 'd', 'x', 's', 'h'};
+    private char[] keyChars = {'w', 's', 'a', 'd', 'p', 'u', 'j', 'x'};
+    private boolean[] keysDown = new boolean[keyChars.length];
+    private Map<Character, String>
 
     static public void main(String[] args) {
         String[] appletArgs = new String[]{"Sketch"};
@@ -24,63 +30,94 @@ public class Sketch extends PApplet {
     }
 
     public void settings() {
-        size(640 , 480);
+        size((int)(640*1.5), (int)(480*1.5));
     }
 
     public void setup() {
         frameRate(30);
         background(0);
         setupServer();
+        setConnected(false);
     }
 
     public void draw() {
+        background(0);
         if (connected) {
-            updateFrame();
+            if (frame != null) {
+                drawFrame(frame);
+            }
         } else {
-            connect();
+            textSize(50);
+            text("Not connected", 10, 50);
+            //textSize(20);
+            //text("Port: " + DEFAULT_PORT, 12, 80);
         }
     }
 
-    private void updateFrame() {
-        StringBuilder header = new StringBuilder();
-        int bytesReceived = 0;
-        byte[] bytes = null;
+    private float[][] gMatrix = {
+        { 0, 0,  1 , 0, 0 },
+        { 0, 1,  2 , 1, 0 },
+        { 1, 2, -16, 2, 1 },
+        { 0, 1,  2 , 1, 0 },
+        { 0, 0,  1 , 0, 0 }
+    };
 
-        try {
-            //parse byte count from header
-            byte ch = reader.readByte();
-            while (ch != '\n') {
-                header.append(parseChar(ch));
-                ch = reader.readByte();
-            }
-            int byteCount = Integer.parseInt(header.toString());
+    private void drawFrame(PImage toDraw) {
+        PImage newImage = new PImage(toDraw.width, toDraw.height); //createImage(toDraw.width, toDraw.height, JPEG);
+        newImage.loadPixels();
+        toDraw.filter(GRAY); //turn to gray scale
+        toDraw.loadPixels();
 
-            //fill array with image data
-            bytes = new byte[byteCount];
-            while (bytesReceived < byteCount) {
-                int result = reader.read(bytes, bytesReceived, byteCount - bytesReceived);
-                if (result > 0) {
-                    bytesReceived += result;
-                } else {
-                    throw new IOException("Disconnected: stream ended");
-                }
+        for (int x = 0; x < toDraw.width; x++) {
+            for (int y = 0; y < toDraw.height; y++ ) {
+                newImage.pixels[x + y*toDraw.width] = convolution(x, y, gMatrix, gMatrix.length, toDraw);
             }
-        } catch (IOException e) {
-            System.out.println("Disconnected: "+ e.getMessage());
-            connected = false;
         }
 
-        //create and display image
-        if (bytes != null) {
-            frame = new PImage(new ImageIcon(bytes).getImage());
-            image(frame, 0, 0, 640, 480);
+        newImage.updatePixels();
+        image(newImage, 0, 0, width, height);
+    }
+
+    private int convolution(int x, int y, float[][] matrix, int matrixsize, PImage img) {
+        float rtotal = (float) 0.0;
+        float gtotal = (float) 0.0;
+        float btotal = (float) 0.0;
+        int offset = matrixsize / 2;
+
+        for (int i = 0; i < matrixsize; i++){
+            for (int j= 0; j < matrixsize; j++){
+                // What pixel are we testing
+                int xloc = x+i-offset;
+                int yloc = y+j-offset;
+                int loc = xloc + img.width*yloc;
+                // Make sure we haven't walked off our image, we could do better here
+                loc = constrain(loc,0,img.pixels.length-1);
+                // Calculate the convolution
+                rtotal += (red(img.pixels[loc]) * matrix[i][j]);
+                gtotal += (green(img.pixels[loc]) * matrix[i][j]);
+                btotal += (blue(img.pixels[loc]) * matrix[i][j]);
+            }
         }
+        // Make sure RGB is within range
+        rtotal = constrain(rtotal, 0, 255);
+        gtotal = constrain(gtotal, 0, 255);
+        btotal = constrain(btotal, 0, 255);
+        // Return the resulting color
+        return color(rtotal, gtotal, btotal);
+    }
+
+    public void setConnected(boolean newVal) {
+        connected = newVal;
+        if (!newVal) {
+            new ConnectThread(serverSocket, this).start();
+        }
+    }
+
+    public void setFrame(PImage newFrame) {
+        frame = newFrame;
     }
 
     private void setupServer() {
-
-        //JOptionPane prompt = new JOptionPane();
-        //portNumber = prompt.
         try {
             serverSocket = new ServerSocket(DEFAULT_PORT);
         } catch (IOException e) {
@@ -88,23 +125,153 @@ public class Sketch extends PApplet {
         }
     }
 
-    private void connect() {
-        System.out.println("Server.java: waiting for connection");
+    public void setStreams(Socket newClientSocket) {
         try {
-            clientSocket = serverSocket.accept();
+            clientSocket = newClientSocket;
             reader = new DataInputStream(clientSocket.getInputStream());
-            writer = new DataOutputStream(clientSocket.getOutputStream());
+            writer = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
 
-            connected = true;
+            new InputThread(reader, this).start();
+
+            setConnected(true);
             System.out.println("Connected to " + clientSocket.getInetAddress());
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
     }
+
+    public void keyReleased() {
+        if (connected) {
+            if (lastKey != 'x' && lastKey != 'p') {
+                try {
+                    writer.write('x');
+                    writer.newLine();
+                    writer.flush();
+                    lastKey = 'x';
+                    System.out.println("   x");
+                    //System.out.println(toSend);
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+        }
+    }
+
+    public void keyPressed() {
+        keysDown
+
+
+        switch (key) {
+            case 'w':
+                keysDown[0] = 'f';
+                break;
+            case 's':
+                toSend = 'b';
+                break;
+            case 'a':
+                toSend = 'l';
+                break;
+            case 'd':
+                toSend = 'r';
+                break;
+            case 'p':
+                toSend = 'p';
+                break;
+            case 'u':
+                toSend = 'u';
+                break;
+            case 'j':
+                toSend = 'd';
+                break;
+            case 'h':
+                toSend = 'h';
+                break;
+        }
+
+
+
+
+    }
+
 }
 
 
 /*
+
+
+                switch (key) {
+                    case 'w':
+                        toSend = 'f';
+                        break;
+                    case 's':
+                        toSend = 'b';
+                        break;
+                    case 'a':
+                        toSend = 'l';
+                        break;
+                    case 'd':
+                        toSend = 'r';
+                        break;
+                    case 'p':
+                        toSend = 'p';
+                        break;
+                    case 'u':
+                        toSend = 'u';
+                        break;
+                    case 'j':
+                        toSend = 'd';
+                        break;
+                    case 'h':
+                        toSend = 'h';
+                        break;
+                }
+
+
+            }
+        }
+    }
+if (toSend != 'z') {
+                    try {
+                        writer.write(toSend);
+                        writer.newLine();
+                        writer.flush();
+                        lastKey = key;
+                        System.out.println(toSend);
+                    } catch (Exception e) {
+                        System.out.println(e.getMessage());
+                    }
+                }
+    private void updateMouse() {
+
+        char toSend = 'x';
+
+        if (mousePressed) {
+            if (mouseY < height / 3) {
+                toSend = 'f';
+            } else if (mouseY > 2 * (height / 3)) {
+                toSend = 'b';
+            } else if (mouseX < width / 3) {
+                toSend = 'l';
+            } else if (mouseX > 2 * (width / 3)) {
+                toSend = 'r';
+            }
+        } else {
+            toSend = 'x';
+        }
+
+        if (lastKey != toSend) {
+            try {
+                writer.writeChar(toSend);
+                writer.writeChar('\n');
+                writer.flush();
+                lastKey = toSend;
+                System.out.println(toSend);
+            } catch (IOException e) {
+                System.out.println("Disconnected: "+ e.getMessage());
+                connected = false;
+            }
+        }
+    }
 
 textSize(50);
         text("Not connected", 10, 50);
@@ -138,81 +305,8 @@ textSize(50);
         }
         */
 
-    /*
-    public void keyReleased() {
-        if (lastKey != key) {
-        char toSend = 'z';
 
-        switch (key) {
-            case 'w':
-                toSend = 's';
-                break;
-            case 's':
-                toSend = 's';
-                break;
-            case 'a':
-                toSend = 'x';
-                break;
-            case 'd':
-                toSend = 'x';
-                break;
-        }
-
-        if (toSend != 'z') {
-
-            try {
-                writer.write('x');
-                writer.write('\n');
-                writer.flush();
-                lastKey = 't';
-                //System.out.println("   t");
-                //System.out.println(toSend);
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
-            }
-        //}
-        //}
-    }
-
-    public void keyPressed() {
-        if (key != lastKey) {
-            char toSend = 'z';
-
-            switch (key) {
-                case 'w':
-                    toSend = 'f';
-                    break;
-                case 's':
-                    toSend = 'b';
-                    break;
-                case 'a':
-                    toSend = 'l';
-                    break;
-                case 'd':
-                    toSend = 'r';
-                    break;
-                case 'p':
-                    toSend = 'p';
-                    break;
-            }
-
-            if (toSend != 'z') {
-                try {
-                    writer.write(toSend);
-                    writer.write('\n');
-                    writer.flush();
-                    lastKey = key;
-                    System.out.println(toSend);
-                } catch (Exception e) {
-                    System.out.println(e.getMessage());
-                }
-            }
-        }
-    }
-}
-
-
-
+/*p
 
     while (true) {
             try {
