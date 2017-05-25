@@ -19,10 +19,9 @@ public class Sketch extends PApplet {
     private PImage frame;
     private boolean connected = false;
     private char lastKey = 'z';
-    private char[] commands = {'f', 'b', 'l', 'r', 'p', 'u', 'd', 'x', 's', 'h'};
-    private char[] keyChars = {'w', 's', 'a', 'd', 'p', 'u', 'j', 'x'};
-    private boolean[] keysDown = new boolean[keyChars.length];
-    private Map<Character, String>
+    //private char[] commands = {'f', 'b', 'l', 'r', 'p', 'u', 'd', 'x', 's', 'h'};
+    //private boolean[] keysDown = new boolean[keyChars.length];
+    private  Map<Character, Boolean> keyMap;
 
     static public void main(String[] args) {
         String[] appletArgs = new String[]{"Sketch"};
@@ -35,7 +34,8 @@ public class Sketch extends PApplet {
 
     public void setup() {
         frameRate(30);
-        background(0);
+
+        setupKeys();
         setupServer();
         setConnected(false);
     }
@@ -140,8 +140,37 @@ public class Sketch extends PApplet {
         }
     }
 
+    private void handleKeys() {
+
+    }
+
     public void keyReleased() {
-        if (connected) {
+
+        keyMap.put(key, false);
+    }
+
+    public void keyPressed() {
+        keyMap.put(key, true);
+    }
+
+    private void setupKeys() {
+        keyMap = new HashMap<>();
+        keyMap.put('w', false);
+        keyMap.put('a', false);
+        keyMap.put('s', false);
+        keyMap.put('d', false);
+        keyMap.put('p', false);
+        keyMap.put('x', false);
+        keyMap.put('u', false);
+        keyMap.put('j', false);
+        keyMap.put('h', false);
+    }
+
+}
+
+
+/*
+if (connected) {
             if (lastKey != 'x' && lastKey != 'p') {
                 try {
                     writer.write('x');
@@ -155,49 +184,6 @@ public class Sketch extends PApplet {
                 }
             }
         }
-    }
-
-    public void keyPressed() {
-        keysDown
-
-
-        switch (key) {
-            case 'w':
-                keysDown[0] = 'f';
-                break;
-            case 's':
-                toSend = 'b';
-                break;
-            case 'a':
-                toSend = 'l';
-                break;
-            case 'd':
-                toSend = 'r';
-                break;
-            case 'p':
-                toSend = 'p';
-                break;
-            case 'u':
-                toSend = 'u';
-                break;
-            case 'j':
-                toSend = 'd';
-                break;
-            case 'h':
-                toSend = 'h';
-                break;
-        }
-
-
-
-
-    }
-
-}
-
-
-/*
-
 
                 switch (key) {
                     case 'w':

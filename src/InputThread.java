@@ -2,7 +2,6 @@ import processing.core.PApplet;
 import processing.core.*;
 import javax.swing.*;
 import java.io.*;
-import java.net.*;
 
 /**
  * Created by Nicholas on 2017-05-19.

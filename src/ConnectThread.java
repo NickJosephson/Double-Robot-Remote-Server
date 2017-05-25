@@ -1,6 +1,5 @@
-import java.io.DataInputStream;
+import java.io.IOException;
 import java.net.ServerSocket;
-import java.net.Socket;
 
 /**
  * Created by Nicholas on 2017-05-19.
@@ -19,7 +18,7 @@ public class ConnectThread extends Thread {
         System.out.println("Server.java: waiting for connection");
         try {
             sketch.setStreams(serverSocket.accept());
-        } catch (Exception e) {
+        } catch (IOException e) {
             System.out.println("Connection error: "+ e.getMessage());
         }
     }
