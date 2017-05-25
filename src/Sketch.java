@@ -21,7 +21,7 @@ public class Sketch extends PApplet {
     private char lastKey = 'z';
     //private char[] commands = {'f', 'b', 'l', 'r', 'p', 'u', 'd', 'x', 's', 'h'};
     //private boolean[] keysDown = new boolean[keyChars.length];
-    private  Map<Character, Boolean> keyMap;
+    private  Map<Character, Key> keyMap;
 
     static public void main(String[] args) {
         String[] appletArgs = new String[]{"Sketch"};
@@ -52,6 +52,8 @@ public class Sketch extends PApplet {
             //textSize(20);
             //text("Port: " + DEFAULT_PORT, 12, 80);
         }
+
+        handleKeys();
     }
 
     private float[][] gMatrix = {
@@ -141,29 +143,75 @@ public class Sketch extends PApplet {
     }
 
     private void handleKeys() {
+        char toSend = 'z';
 
+        if (Key.park.wasPressed()) {
+            toSend = 'p';
+        } else if (Key.stop.wasPressed()) {
+            toSend = 'x';
+        } else if (Key.forward.wasReleased()) {
+            toSend = 's';
+        } else if (Key.back.wasReleased()) {
+            toSend = 's';
+        } else if (Key.left.wasReleased()) {
+            toSend = 't';
+        } else if (Key.right.wasReleased()) {
+            toSend = 't';
+        } else if (Key.forward.wasPressed()) {
+            toSend = 'f';
+        } else if (Key.back.wasPressed()) {
+            toSend = 'b';
+        } else if (Key.left.wasPressed()) {
+            toSend = 'l';
+        } else if (Key.right.wasPressed()) {
+            toSend = 'r';
+        } else if (Key.up.wasReleased()) {
+            toSend = 'h';
+        } else if (Key.up.wasPressed()) {
+            toSend = 'u';
+        } else if (Key.down.wasReleased()) {
+            toSend = 'h';
+        } else if (Key.down.wasPressed()) {
+            toSend = 'd';
+        }
+
+        if (connected && toSend != 'z') {
+            try {
+                writer.write(toSend);
+                writer.newLine();
+                writer.flush();
+                System.out.print(toSend);
+            } catch (IOException e) {
+                System.out.println("Disconnected: "+ e.getMessage());
+                setConnected(false);
+            }
+        }
     }
 
     public void keyReleased() {
-
-        keyMap.put(key, false);
+        Key toUP = keyMap.get(key);
+        if (toUP != null) {
+            toUP.setUp();
+        }
     }
 
     public void keyPressed() {
-        keyMap.put(key, true);
+        Key toDown = keyMap.get(key);
+        if (toDown != null) {
+            toDown.setDown();
+        }
     }
 
     private void setupKeys() {
         keyMap = new HashMap<>();
-        keyMap.put('w', false);
-        keyMap.put('a', false);
-        keyMap.put('s', false);
-        keyMap.put('d', false);
-        keyMap.put('p', false);
-        keyMap.put('x', false);
-        keyMap.put('u', false);
-        keyMap.put('j', false);
-        keyMap.put('h', false);
+        keyMap.put('w', Key.forward);
+        keyMap.put('a', Key.left);
+        keyMap.put('s', Key.back);
+        keyMap.put('d', Key.right);
+        keyMap.put('p', Key.park);
+        keyMap.put('x', Key.stop);
+        keyMap.put('u', Key.up);
+        keyMap.put('j', Key.down);
     }
 
 }
