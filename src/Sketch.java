@@ -19,9 +19,8 @@ public class Sketch extends PApplet {
     private PImage frame;
     private boolean connected = false;
     private char lastKey = 'z';
-    //private char[] commands = {'f', 'b', 'l', 'r', 'p', 'u', 'd', 'x', 's', 'h'};
-    //private boolean[] keysDown = new boolean[keyChars.length];
-    private  Map<Character, Key> keyMap;
+    private Map<Character, Key> keyMap;
+    private boolean filterOn = false;
 
     static public void main(String[] args) {
         String[] appletArgs = new String[]{"Sketch"};
@@ -41,10 +40,17 @@ public class Sketch extends PApplet {
     }
 
     public void draw() {
-        background(0);
+        //background(0);
         if (connected) {
             if (frame != null) {
-                drawFrame(frame);
+                if (filterOn) {
+                    frame = addFilter(frame, Filter.LOG, 1);
+                    //frame = addFilter(frame, Filter.ERODE, 1);
+                    frame = addFilter(frame, Filter.DILATE, 2);
+                }
+
+                image(frame, 0, 0, width, height);
+                frame = null;
             }
         } else {
             textSize(50);
@@ -54,58 +60,6 @@ public class Sketch extends PApplet {
         }
 
         handleKeys();
-    }
-
-    private float[][] gMatrix = {
-        { 0, 0,  1 , 0, 0 },
-        { 0, 1,  2 , 1, 0 },
-        { 1, 2, -16, 2, 1 },
-        { 0, 1,  2 , 1, 0 },
-        { 0, 0,  1 , 0, 0 }
-    };
-
-    private void drawFrame(PImage toDraw) {
-        PImage newImage = new PImage(toDraw.width, toDraw.height); //createImage(toDraw.width, toDraw.height, JPEG);
-        newImage.loadPixels();
-        toDraw.filter(GRAY); //turn to gray scale
-        toDraw.loadPixels();
-
-        for (int x = 0; x < toDraw.width; x++) {
-            for (int y = 0; y < toDraw.height; y++ ) {
-                newImage.pixels[x + y*toDraw.width] = convolution(x, y, gMatrix, gMatrix.length, toDraw);
-            }
-        }
-
-        newImage.updatePixels();
-        image(newImage, 0, 0, width, height);
-    }
-
-    private int convolution(int x, int y, float[][] matrix, int matrixsize, PImage img) {
-        float rtotal = (float) 0.0;
-        float gtotal = (float) 0.0;
-        float btotal = (float) 0.0;
-        int offset = matrixsize / 2;
-
-        for (int i = 0; i < matrixsize; i++){
-            for (int j= 0; j < matrixsize; j++){
-                // What pixel are we testing
-                int xloc = x+i-offset;
-                int yloc = y+j-offset;
-                int loc = xloc + img.width*yloc;
-                // Make sure we haven't walked off our image, we could do better here
-                loc = constrain(loc,0,img.pixels.length-1);
-                // Calculate the convolution
-                rtotal += (red(img.pixels[loc]) * matrix[i][j]);
-                gtotal += (green(img.pixels[loc]) * matrix[i][j]);
-                btotal += (blue(img.pixels[loc]) * matrix[i][j]);
-            }
-        }
-        // Make sure RGB is within range
-        rtotal = constrain(rtotal, 0, 255);
-        gtotal = constrain(gtotal, 0, 255);
-        btotal = constrain(btotal, 0, 255);
-        // Return the resulting color
-        return color(rtotal, gtotal, btotal);
     }
 
     public void setConnected(boolean newVal) {
@@ -173,6 +127,8 @@ public class Sketch extends PApplet {
             toSend = 'h';
         } else if (Key.down.wasPressed()) {
             toSend = 'd';
+        } else if (Key.filterToggle.wasReleased()) {
+            filterOn = !filterOn;
         }
 
         if (connected && toSend != 'z') {
@@ -212,201 +168,159 @@ public class Sketch extends PApplet {
         keyMap.put('x', Key.stop);
         keyMap.put('u', Key.up);
         keyMap.put('j', Key.down);
+        keyMap.put('f', Key.filterToggle);
     }
 
-}
+    private static final float[][] logMatrix = {
+            { 0, 0,  1 , 0, 0 },
+            { 0, 1,  2 , 1, 0 },
+            { 1, 2, -16, 2, 1 },
+            { 0, 1,  2 , 1, 0 },
+            { 0, 0,  1 , 0, 0 }
+    };
 
 
-/*
-if (connected) {
-            if (lastKey != 'x' && lastKey != 'p') {
-                try {
-                    writer.write('x');
-                    writer.newLine();
-                    writer.flush();
-                    lastKey = 'x';
-                    System.out.println("   x");
-                    //System.out.println(toSend);
-                } catch (Exception e) {
-                    System.out.println(e.getMessage());
-                }
-            }
-        }
-
-                switch (key) {
-                    case 'w':
-                        toSend = 'f';
-                        break;
-                    case 's':
-                        toSend = 'b';
-                        break;
-                    case 'a':
-                        toSend = 'l';
-                        break;
-                    case 'd':
-                        toSend = 'r';
-                        break;
-                    case 'p':
-                        toSend = 'p';
-                        break;
-                    case 'u':
-                        toSend = 'u';
-                        break;
-                    case 'j':
-                        toSend = 'd';
-                        break;
-                    case 'h':
-                        toSend = 'h';
-                        break;
-                }
-
-
-            }
-        }
+    public enum Filter {
+        DILATE,
+        ERODE,
+        LOG,
+        GRAY
     }
-if (toSend != 'z') {
-                    try {
-                        writer.write(toSend);
-                        writer.newLine();
-                        writer.flush();
-                        lastKey = key;
-                        System.out.println(toSend);
-                    } catch (Exception e) {
-                        System.out.println(e.getMessage());
+
+    public PImage addFilter(PImage image, Filter filter, int times) {
+        PImage newImage = new PImage(image.width, image.height); //createImage(toDraw.width, toDraw.height, JPEG);
+        PImage temp;
+        boolean firstTIme = true;
+
+        if (filter == Filter.GRAY || filter == Filter.DILATE) {
+            image.filter(PApplet.GRAY); //turn to gray scale
+        }
+
+        if (filter != Filter.GRAY) {
+            newImage.loadPixels();
+            image.loadPixels();
+            for (int i = 0; i < times; i++) {
+                if (!firstTIme) {
+                    temp = image;
+                    image = newImage;
+                    newImage = temp;
+                } else {
+                    firstTIme = false;
+                }
+
+                for (int x = 0; x < image.width; x++) {
+                    for (int y = 0; y < image.height; y++) {
+                        switch (filter) {
+                            case ERODE:
+                                newImage.pixels[x + y * image.width] = erode(x, y, image);
+                                break;
+                            case DILATE:
+                                newImage.pixels[x + y * image.width] = dilate(x, y, image);
+                                break;
+                            case LOG:
+                                newImage.pixels[x + y * image.width] = convolution(x, y, logMatrix, logMatrix.length, image);
+                                break;
+                        }
                     }
                 }
-    private void updateMouse() {
-
-        char toSend = 'x';
-
-        if (mousePressed) {
-            if (mouseY < height / 3) {
-                toSend = 'f';
-            } else if (mouseY > 2 * (height / 3)) {
-                toSend = 'b';
-            } else if (mouseX < width / 3) {
-                toSend = 'l';
-            } else if (mouseX > 2 * (width / 3)) {
-                toSend = 'r';
             }
         } else {
-            toSend = 'x';
+            return image;
         }
 
-        if (lastKey != toSend) {
-            try {
-                writer.writeChar(toSend);
-                writer.writeChar('\n');
-                writer.flush();
-                lastKey = toSend;
-                System.out.println(toSend);
-            } catch (IOException e) {
-                System.out.println("Disconnected: "+ e.getMessage());
-                connected = false;
-            }
+        newImage.updatePixels();
+        return newImage;
+    }
+
+    private boolean getbinary(int loc, PImage img) {
+        return red(img.pixels[loc]) > 64;
+    }
+
+    private int getColour(boolean value) {
+        if (value) {
+            return color(255, 255, 255);
+        } else {
+            return color(0, 0, 0);
         }
     }
 
-textSize(50);
-        text("Not connected", 10, 50);
+    private int erode(int x, int y, PImage img) {
+        boolean centerVal = getbinary(x + y*img.width, img);
 
-/noFill();
-        //rect(width/3, height/3, (width/3),(height/3));
-        char toSend = 'x';
+        int[] rVal = {0, 1, 2, 1};
+        int[] cVal = {1, 0, 1, 2};
 
-        if (mousePressed) {
-            toSend = 'p';
-        } else if (mouseY < height/3) {
-            toSend = 'f';
-        } else if (mouseY > 2*(height/3)) {
-            toSend = 'b';
-        } else if (mouseX < width/3) {
-            toSend = 'l';
-        } else if (mouseX > 2*(width/3)) {
-            toSend = 'r';
-        }
+        for (int i = 0; i < rVal.length && centerVal; i++) {
+            for (int j= 0; j < cVal.length && centerVal; j++) {
+                // What pixel are we testing
+                int xloc = x+rVal[i]-1;
+                int yloc = y+cVal[j]-1;
+                int loc = xloc + img.width*yloc;
+                // Make sure we haven't walked off our image, we could do better here
+                loc = constrain(loc,0,img.pixels.length-1);
+                boolean otherVal = getbinary(loc, img);
 
-        if (lastKey != toSend) {
-            try {
-                writer.write(toSend);
-                writer.write('\n');
-                writer.flush();
-                lastKey = toSend;
-                System.out.println(toSend);
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
-            }
-        }
-        */
-
-
-/*p
-
-    while (true) {
-            try {
-                // check for input request type
-
-                try {
-                    fileOut = new FileWriter("img.txt");
-                } catch (Exception e) {
-                    System.out.println(e.getMessage());
+                if (!otherVal) {
+                    centerVal = false;
                 }
+            }
+        }
 
-                int ch = reader.read();
+        return getColour(centerVal);
+    }
 
-                if (ch != -1) {
+    private int dilate(int x, int y, PImage img) {
+        boolean centerVal = getbinary(x + y*img.width, img);
 
-                    while (ch != -1) {
-                        fileOut.write(parseChar(ch));
+        int[] rVal = {0, 1, 2, 1};
+        int[] cVal = {1, 0, 1, 2};
 
-                        ch = reader.read();
-                    }
+        for (int i = 0; i < rVal.length && !centerVal; i++) {
+            for (int j= 0; j < cVal.length && !centerVal; j++) {
+                // What pixel are we testing
+                int xloc = x+rVal[i]-1;
+                int yloc = y+cVal[j]-1;
+                int loc = xloc + img.width*yloc;
+                // Make sure we haven't walked off our image, we could do better here
+                loc = constrain(loc,0,img.pixels.length-1);
+                boolean otherVal = getbinary(loc, img);
+
+                if (otherVal) {
+                    centerVal = true;
                 }
-
-                fileOut.flush();
-                fileOut.close();
-
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
-            }
-
-            frame = loadImage("img.jpg");
-            image(frame, 0, 0, 1280, 960);
-
-            if (frame.width > 0) {
-                // Image is ready to go, draw it
-                //frame = requestImage("img.jpg");
             }
         }
 
-        try {
-            // check for input request type
+        return getColour(centerVal);
+    }
 
-            String line = reader.readLine();
+    private int convolution(int x, int y, float[][] matrix, int matrixSize, PImage img) {
+        float rtotal = (float) 0.0;
+        float gtotal = (float) 0.0;
+        float btotal = (float) 0.0;
+        int offset = matrixSize / 2;
 
-            while (line != null) {
-
-                fileOut.write(line);
-
-                line = reader.readLine();
+        for (int i = 0; i < matrixSize; i++){
+            for (int j= 0; j < matrixSize; j++){
+                // What pixel are we testing
+                int xloc = x+i-offset;
+                int yloc = y+j-offset;
+                int loc = xloc + img.width*yloc;
+                // Make sure we haven't walked off our image, we could do better here
+                loc = constrain(loc,0,img.pixels.length-1);
+                // Calculate the convolution
+                rtotal += (red(img.pixels[loc]) * matrix[i][j]);
+                gtotal += (green(img.pixels[loc]) * matrix[i][j]);
+                btotal += (blue(img.pixels[loc]) * matrix[i][j]);
             }
-
-            fileOut.flush();
-            fileOut.close();
-
-            try {
-                fileOut = new FileWriter("img.jpg");
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
-            }
-
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
         }
+        // Make sure RGB is within range
+        rtotal = constrain(rtotal, 0, 255);
+        gtotal = constrain(gtotal, 0, 255);
+        btotal = constrain(btotal, 0, 255);
+        // Return the resulting color
+        return color(rtotal, gtotal, btotal);
+    }
 
-        if (frame.width > 0) {
-            // Image is ready to go, draw it
-            image(frame, 0, 0, 1280,960);
-            frame = requestImage("img.jpg");
-        }
-        */
+
+}

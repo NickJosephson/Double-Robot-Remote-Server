@@ -7,6 +7,7 @@ public class Key{
     public static Key stop = new Key();
     public static Key up = new Key();
     public static Key down = new Key();
+    public static Key filterToggle = new Key();
 
     private boolean isDown = false;
     private boolean wasDown = false;
