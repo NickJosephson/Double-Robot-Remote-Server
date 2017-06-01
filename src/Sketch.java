@@ -4,7 +4,6 @@ import java.io.*;
 import java.net.*;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Scanner;
 
 /**
  * Created by Nicholas on 2017-05-12.
@@ -14,13 +13,10 @@ public class Sketch extends PApplet {
     private static final int DEFAULT_PORT = 4000;
 
     private ServerSocket serverSocket;
-    private Socket clientSocket;
-    private DataInputStream reader;
-    private BufferedWriter writer;
+    private Map<Character, Key> keyMap;
     private PImage frame = null;
     private PImage blendFrame = null;
     private boolean connected = false;
-    private Map<Character, Key> keyMap;
     private boolean filterOn = false;
     private boolean blendOn = false;
 
@@ -43,21 +39,29 @@ public class Sketch extends PApplet {
 
     public void draw() {
         if (connected) {
+            background(0);
+            if (frame != null) {
+                image(frame, 0, 0, width, height);
+            }
+            /*
             if (frame != null) {
                 if (filterOn) {
                     if (blendOn) {
                         blendFrame = frame.copy();
                     }
 
-                    //convertToGrey(frame);
-                    //frame = applyLOG(frame);
-                    //frame = applyL(frame);
-                    //frame.filter(BLUR);
-                    //boolean[][] matrix = convertToBinary(frame, 64);
-                    //matrix = cleanFilter(matrix);
-                    //matrix = erodeFilter(matrix);
-                    //matrix = dilateFilter(matrix);
-                    //matrix = dilateFilter(matrix);
+                    convertToGrey(frame);
+                    frame = applyLOG(frame);
+
+                    //boolean[][] matrix = convertToBinary(frame, 255 * (mouseX/width));
+
+                    //matrix = applyClean(matrix);
+                    //matrix = applyErode(matrix);
+                    //matrix = applyDilate(matrix);
+                    //matrix = applyDilate(matrix);
+                    //matrix = applyErode(matrix);
+                    //matrix = applyErode(matrix);
+
                     //frame = convertToPImage(matrix);
 
                     if (blendOn) {
@@ -65,9 +69,8 @@ public class Sketch extends PApplet {
                     }
                 }
 
-                image(frame, 0, 0, width, height);
                 frame = null;
-            }
+            }*/
         } else {
             background(0);
             textSize(50);
@@ -76,19 +79,24 @@ public class Sketch extends PApplet {
             //text("Port: " + DEFAULT_PORT, 12, 80);
         }
 
-        handleKeys();
-    }
-
-    public void setConnected(boolean newVal) {
-        connected = newVal;
-        if (!newVal) {
-            new ConnectThread(serverSocket, this).start();
-        }
+        //handleKeys();
     }
 
     public void setFrame(PImage newFrame) {
         frame = newFrame;
     }
+
+    public void toggleFilter() {
+        filterOn = !filterOn;
+    }
+
+    public void toggleBlend() {
+        blendOn = !blendOn;
+    }
+
+    /*************************************
+     *            Networking             *
+     *************************************/
 
     private void setupServer() {
         try {
@@ -100,11 +108,12 @@ public class Sketch extends PApplet {
 
     public void setStreams(Socket newClientSocket) {
         try {
-            clientSocket = newClientSocket;
-            reader = new DataInputStream(clientSocket.getInputStream());
-            writer = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
+            Socket clientSocket = newClientSocket;
+            DataInputStream reader = new DataInputStream(clientSocket.getInputStream());
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
 
             new InputThread(reader, this).start();
+            new OutputThread(writer, this).start();
 
             setConnected(true);
             System.out.println("Connected to " + clientSocket.getInetAddress());
@@ -113,62 +122,19 @@ public class Sketch extends PApplet {
         }
     }
 
-    private void handleKeys() {
-        char toSend = 'z';
-
-        while (toSend != 'y') {
-            toSend = 'z';
-            if (Key.park.wasPressed()) {
-                toSend = 'p';
-            } else if (Key.stop.wasPressed()) {
-                toSend = 'x';
-            } else if (Key.forward.wasReleased()) {
-                toSend = 's';
-            } else if (Key.back.wasReleased()) {
-                toSend = 's';
-            } else if (Key.left.wasReleased()) {
-                toSend = 't';
-            } else if (Key.right.wasReleased()) {
-                toSend = 't';
-            } else if (Key.forward.wasPressed()) {
-                toSend = 'f';
-            } else if (Key.back.wasPressed()) {
-                toSend = 'b';
-            } else if (Key.left.wasPressed()) {
-                toSend = 'l';
-            } else if (Key.right.wasPressed()) {
-                toSend = 'r';
-            } else if (Key.up.wasReleased()) {
-                toSend = 'h';
-            } else if (Key.up.wasPressed()) {
-                toSend = 'u';
-            } else if (Key.down.wasReleased()) {
-                toSend = 'h';
-            } else if (Key.down.wasPressed()) {
-                toSend = 'd';
-            } else if (Key.filterToggle.wasReleased()) {
-                filterOn = !filterOn;
-            } else if (Key.blendToggle.wasReleased()) {
-                blendOn = !blendOn;
-            } else {
-                toSend = 'y';
-            }
-
-            if (connected && toSend != 'z' && toSend != 'y') {
-                try {
-                    writer.write(toSend);
-                    writer.newLine();
-                    writer.flush();
-                    System.out.print(toSend);
-                } catch (IOException e) {
-                    System.out.println("Disconnected: " + e.getMessage());
-                    setConnected(false);
-                }
-            }
+    public void setConnected(boolean newVal) {
+        connected = newVal;
+        if (!newVal) {
+            new ConnectThread(serverSocket, this).start();
         }
     }
 
+    /*************************************
+     *             Keyboard              *
+     *************************************/
+
     public void keyReleased() {
+        System.out.println("up");
         Key toUP = keyMap.get(key);
         if (toUP != null) {
             toUP.setUp();
@@ -176,6 +142,7 @@ public class Sketch extends PApplet {
     }
 
     public void keyPressed() {
+        System.out.println("down");
         Key toDown = keyMap.get(key);
         if (toDown != null) {
             toDown.setDown();
@@ -195,6 +162,24 @@ public class Sketch extends PApplet {
         keyMap.put('f', Key.filterToggle);
         keyMap.put('v', Key.blendToggle);
     }
+
+    /*************************************
+     *         Image Processing          *
+     *************************************/
+
+    private static final float[][] logMatrix = {
+            { 0, 0,  1 , 0, 0 },
+            { 0, 1,  2 , 1, 0 },
+            { 1, 2, -16, 2, 1 },
+            { 0, 1,  2 , 1, 0 },
+            { 0, 0,  1 , 0, 0 }
+    };
+
+    private static final float[][] lMatrix = {
+            { 0,  1,  0 },
+            { 1, -4,  1 },
+            { 0,  1,  0 }
+    };
 
     private void convertToGrey(PImage image) {
         image.filter(PApplet.GRAY); //turn to gray scale
@@ -225,35 +210,6 @@ public class Sketch extends PApplet {
 
         result.updatePixels();
         return result;
-    }
-
-    private static final float[][] logMatrix = {
-            { 0, 0,  1 , 0, 0 },
-            { 0, 1,  2 , 1, 0 },
-            { 1, 2, -16, 2, 1 },
-            { 0, 1,  2 , 1, 0 },
-            { 0, 0,  1 , 0, 0 }
-    };
-
-    private static final float[][] lMatrix = {
-            { 0,  1,  0 },
-            { 1, -4,  1 },
-            { 0,  1,  0 }
-    };
-
-    private PImage applyL(PImage image) {
-        PImage newImage = new PImage(image.width, image.height);
-        newImage.loadPixels();
-        image.loadPixels();
-
-        for (int x = 0; x < image.width; x++) {
-            for (int y = 0; y < image.height; y++) {
-                newImage.pixels[x + y * image.width] = convolutionRGB(x, y, lMatrix, lMatrix.length, image);
-            }
-        }
-
-        newImage.updatePixels();
-        return newImage;
     }
 
     private PImage applyLOG(PImage image) {
@@ -303,8 +259,7 @@ public class Sketch extends PApplet {
         return color(rTotal, gTotal, bTotal);
     }
 
-
-    public boolean[][] dilateFilter(boolean[][] image) {
+    private boolean[][] applyDilate(boolean[][] image) {
         final int[] rVal = {0, 1, 2, 1};
         final int[] cVal = {1, 0, 1, 2};
         boolean[][] result = new boolean[image.length][image[0].length];
@@ -334,7 +289,7 @@ public class Sketch extends PApplet {
         return result;
     }
 
-    public boolean[][] erodeFilter(boolean[][] image) {
+    private boolean[][] applyErode(boolean[][] image) {
         final int[] rVal = {0, 1, 2, 1};
         final int[] cVal = {1, 0, 1, 2};
         boolean[][] result = new boolean[image.length][image[0].length];
@@ -364,7 +319,7 @@ public class Sketch extends PApplet {
         return result;
     }
 
-    public boolean[][] cleanFilter(boolean[][] image) {
+    private boolean[][] applyClean(boolean[][] image) {
         boolean[][] result = new boolean[image.length][image[0].length];
         boolean centerVal;
         boolean otherVal;
@@ -398,96 +353,6 @@ public class Sketch extends PApplet {
         }
 
         return result;
-    }
-
-    private PImage applyErode(PImage image) {
-        PImage newImage = new PImage(image.width, image.height);
-        newImage.loadPixels();
-        image.loadPixels();
-
-        for (int x = 0; x < image.width; x++) {
-            for (int y = 0; y < image.height; y++) {
-                newImage.pixels[x + y * image.width] = erode(x, y, image);
-            }
-        }
-
-        newImage.updatePixels();
-        return newImage;
-    }
-
-    private int erode(int x, int y, PImage img) {
-        final int[] rVal = {0, 1, 2, 1};
-        final int[] cVal = {1, 0, 1, 2};
-        boolean centerVal = getbinary(x + y*img.width, img);
-
-        for (int i = 0; i < rVal.length && centerVal; i++) {
-            for (int j= 0; j < cVal.length && centerVal; j++) {
-                // What pixel are we testing
-                int xloc = x+rVal[i]-1;
-                int yloc = y+cVal[j]-1;
-                int loc = xloc + img.width*yloc;
-                // Make sure we haven't walked off our image, we could do better here
-                loc = constrain(loc,0,img.pixels.length-1);
-                boolean otherVal = getbinary(loc, img);
-
-                if (!otherVal) {
-                    centerVal = false;
-                }
-            }
-        }
-
-        return getColour(centerVal);
-    }
-
-    private PImage applyDilate(PImage image) {
-        PImage newImage = new PImage(image.width, image.height);
-        newImage.loadPixels();
-        image.loadPixels();
-
-        for (int x = 0; x < image.width; x++) {
-            for (int y = 0; y < image.height; y++) {
-                newImage.pixels[x + y * image.width] = dilate(x, y, image);
-            }
-        }
-
-        newImage.updatePixels();
-        return newImage;
-    }
-
-    private int dilate(int x, int y, PImage img) {
-        final int[] rVal = {0, 1, 2, 1};
-        final int[] cVal = {1, 0, 1, 2};
-        boolean centerVal = getbinary(x + y*img.width, img);
-
-        for (int i = 0; i < rVal.length && !centerVal; i++) {
-            for (int j= 0; j < cVal.length && !centerVal; j++) {
-                // What pixel are we testing
-                int xloc = x+rVal[i]-1;
-                int yloc = y+cVal[j]-1;
-                int loc = xloc + img.width*yloc;
-                // Make sure we haven't walked off our image, we could do better here
-                loc = constrain(loc,0,img.pixels.length-1);
-                boolean otherVal = getbinary(loc, img);
-
-                if (otherVal) {
-                    centerVal = true;
-                }
-            }
-        }
-
-        return getColour(centerVal);
-    }
-
-    private int getColour(boolean value) {
-        if (value) {
-            return color(255, 255, 255);
-        } else {
-            return color(0, 0, 0);
-        }
-    }
-
-    private boolean getbinary(int loc, PImage img) {
-        return red(img.pixels[loc]) > 64;
     }
 
 }

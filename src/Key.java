@@ -1,3 +1,6 @@
+/**
+ * Created by Nicholas on 2017-05-19.
+ */
 public class Key{
     public static Key forward = new Key();
     public static Key back = new Key();
