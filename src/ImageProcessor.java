@@ -5,6 +5,49 @@ import processing.core.*;
  * Created by Nicholas on 2017-05-26.
  */
 public class ImageProcessor extends PApplet {
+
+                /*
+                    public void toggleFilter() {
+        filterOn = !filterOn;
+    }
+
+    public void toggleBlend() {
+        blendOn = !blendOn;
+    }
+
+        private boolean filterOn = false;
+    private boolean blendOn = false;
+
+
+
+            if (frame != null) {
+                if (filterOn) {
+                    if (blendOn) {
+                        blendFrame = frame.copy();
+                    }
+
+                    convertToGrey(frame);
+                    frame = applyLOG(frame);
+
+                    //boolean[][] matrix = convertToBinary(frame, 255 * (mouseX/width));
+
+                    //matrix = applyClean(matrix);
+                    //matrix = applyErode(matrix);
+                    //matrix = applyDilate(matrix);
+                    //matrix = applyDilate(matrix);
+                    //matrix = applyErode(matrix);
+                    //matrix = applyErode(matrix);
+
+                    //frame = convertToPImage(matrix);
+
+                    if (blendOn) {
+                        frame.blend(blendFrame, 0, 0, frame.width, frame.height, 0, 0, blendFrame.width, blendFrame.height, LIGHTEST);
+                    }
+                }
+
+                frame = null;
+            }*/
+
     private static final float[][] logMatrix = {
             { 0, 0,  1 , 0, 0 },
             { 0, 1,  2 , 1, 0 },

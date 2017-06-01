@@ -60,9 +60,9 @@ public class OutputThread extends Thread{
             } else if (Key.down.wasPressed()) {
                 toSend = 'd';
             } else if (Key.filterToggle.wasReleased()) {
-                sketch.toggleFilter();
+                //sketch.toggleFilter();
             } else if (Key.blendToggle.wasReleased()) {
-                sketch.toggleBlend();
+                //sketch.toggleBlend();
             } else {
                 toSend = 'y';
             }
