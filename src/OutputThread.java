@@ -70,7 +70,6 @@ public class OutputThread extends Thread{
             if (toSend != 'z' && toSend != 'y') {
                 try {
                     writer.write(toSend);
-                    writer.newLine();
                     writer.flush();
                     System.out.print(toSend);
                 } catch (IOException e) {
