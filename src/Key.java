@@ -1,3 +1,6 @@
+/**
+ * Created by Nicholas on 2017-05-19.
+ */
 public class Key{
     public static Key forward = new Key();
     public static Key back = new Key();
@@ -7,6 +10,8 @@ public class Key{
     public static Key stop = new Key();
     public static Key up = new Key();
     public static Key down = new Key();
+    public static Key filterToggle = new Key();
+    public static Key blendToggle = new Key();
 
     private boolean isDown = false;
     private boolean wasDown = false;
@@ -42,13 +47,6 @@ public class Key{
         if (isDown != wasDown) {
             dealtWith = false;
         }
-    }
-
-    private void print() {
-        System.out.println();
-        System.out.println("isDown: "+ isDown);
-        System.out.println("wasDown: "+ wasDown);
-        System.out.println("dealtWith: "+ dealtWith);
     }
 
 }
