@@ -84,6 +84,39 @@ public class Sketch extends PApplet implements ControlListener{
         }
     }
 
+    /*************************************
+     *              CP5 GUI              *
+     *************************************/
+
+    private void setupGUI() {
+        String[] filterNames = new String[]{"Dilate", "Erode", "Line", "Bilateral", "None"};
+        filterTypes = new Filter[]{new Dilate(cp5, this), new Erode(cp5, this), new Line(cp5, this), new Bilateral(cp5, this), null};
+        cp5 = new ControlP5(this);
+
+        cp5.addButton("toggleFiltering")
+                .setBroadcast(false)
+                .setLabel("Filter On /Off")
+                .setPosition(5,VIDEO_HEIGHT - 20)
+                .setSize(75,15)
+                .setBroadcast(true)
+        ;
+
+
+        for (int i = 0; i < filters.length; i++) {
+            dropdownLists[i] = cp5.addScrollableList(""+i)
+                    .setBroadcast(false)
+                    .setLabel("Filter "+ (i+1))
+                    .setPosition((i * (WINDOW_WIDTH/filters.length)) + 5, VIDEO_HEIGHT + 5)
+                    .setSize((WINDOW_WIDTH/filters.length) - 10, WINDOW_HEIGHT - VIDEO_HEIGHT - 10)
+                    .setBarHeight(20)
+                    .setItemHeight(20)
+                    .addItems(filterNames)
+                    .addListener(this)
+                    .setBroadcast(true)
+            ;
+        }
+    }
+
     public void controlEvent(ControlEvent theEvent) {
         if (theEvent.isController() && theEvent.getController() instanceof ScrollableList) {
             int filterIndex = Integer.parseInt(theEvent.getName());
@@ -104,34 +137,9 @@ public class Sketch extends PApplet implements ControlListener{
         }
     }
 
-    private void setupGUI() {
-        String[] filterNames = new String[]{"Dilate", "Erode", "Line", "Bilateral", "None"};
-        filterTypes = new Filter[]{new Dilate(cp5, this), new Erode(cp5, this), new Line(cp5, this), new Bilateral(cp5, this), null};
-        cp5 = new ControlP5(this);
-
-        cp5.addButton("toggleFiltering")
-            .setBroadcast(false)
-            .setLabel("Filter On /Off")
-            .setPosition(5,VIDEO_HEIGHT - 20)
-            .setSize(75,15)
-            .setBroadcast(true)
-        ;
-
-
-        for (int i = 0; i < filters.length; i++) {
-            dropdownLists[i] = cp5.addScrollableList(""+i)
-                .setBroadcast(false)
-                .setLabel("Filter "+ (i+1))
-                .setPosition((i * (WINDOW_WIDTH/filters.length)) + 5, VIDEO_HEIGHT + 5)
-                .setSize((WINDOW_WIDTH/filters.length) - 10, WINDOW_HEIGHT - VIDEO_HEIGHT - 10)
-                .setBarHeight(20)
-                .setItemHeight(20)
-                .addItems(filterNames)
-                .addListener(this)
-                .setBroadcast(true)
-            ;
-        }
-    }
+    /*************************************
+     *         Frame Processing          *
+     *************************************/
 
     private synchronized void processFrame() {
         for (Filter currFilter : filters) {
