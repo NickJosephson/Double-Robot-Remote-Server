@@ -27,47 +27,47 @@ public class OutputThread extends Thread{
     }
 
     private void handleKeys() {
-        char toSend = 'z';
+        String toSend = "z";
 
         //while (toSend != 'y') {
             //toSend = 'z';
             if (Key.park.wasPressed()) {
-                toSend = 'p';
+                toSend = "p";
             } else if (Key.stop.wasPressed()) {
-                toSend = 'x';
+                toSend = "x";
             } else if (Key.forward.wasReleased()) {
-                toSend = 's';
+                toSend = "s";
             } else if (Key.back.wasReleased()) {
-                toSend = 's';
+                toSend = "s";
             } else if (Key.left.wasReleased()) {
-                toSend = 't';
+                toSend = "t";
             } else if (Key.right.wasReleased()) {
-                toSend = 't';
+                toSend = "t";
             } else if (Key.forward.wasPressed()) {
-                toSend = 'f';
+                toSend = "f";
             } else if (Key.back.wasPressed()) {
-                toSend = 'b';
+                toSend = "b";
             } else if (Key.left.wasPressed()) {
-                toSend = 'l';
+                toSend = "l";
             } else if (Key.right.wasPressed()) {
-                toSend = 'r';
+                toSend = "r";
             } else if (Key.up.wasReleased()) {
-                toSend = 'h';
+                toSend = "h";
             } else if (Key.up.wasPressed()) {
-                toSend = 'u';
+                toSend = "u";
             } else if (Key.down.wasReleased()) {
-                toSend = 'h';
+                toSend = "h";
             } else if (Key.down.wasPressed()) {
-                toSend = 'd';
+                toSend = "d";
             } else if (Key.filterToggle.wasReleased()) {
-                //sketch.toggleFilter();
+                sketch.toggleFiltering();
             } else if (Key.blendToggle.wasReleased()) {
                 //sketch.toggleBlend();
             } else {
-                toSend = 'y';
+                toSend = "y";
             }
 
-            if (toSend != 'z' && toSend != 'y') {
+            if (!toSend.equals("z") && !toSend.equals("y")) {
                 try {
                     writer.write(toSend);
                     writer.flush();

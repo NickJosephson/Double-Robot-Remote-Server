@@ -4,10 +4,92 @@ import processing.core.*;
 /**
  * Created by Nicholas on 2017-05-26.
  */
-public class ImageProcessor extends PApplet {
+public class ImageProcessor {
+    private PApplet sketch;
 
-                /*
-                    public void toggleFilter() {
+    public ImageProcessor(PApplet sketch) {
+        this.sketch = sketch;
+    }
+
+    /*
+  /*
+    private class SimpleButton extends ActiveElement {
+        private boolean on;
+
+        public SimpleButton ( float x, float y, float w, float h ) {
+            // this registers this button with the "manager" and sets "hot area"
+            super( x,y,w,h );
+            on = false;
+            Interactive.add(this);
+        }
+
+        // one possible callback, automatically called
+        // by manager when button clicked
+        public void mousePressed() {
+            on = !on;
+        }
+
+        public void draw() {
+            if (hover) {
+                stroke(255);
+            } else {
+                noStroke();
+            }
+
+            if (on) {
+                fill(200);
+            } else {
+                fill(100);
+            }
+            rect(x, y, width, height);
+        }
+    }
+
+    public class Slider {
+        private float x, y, width, height;
+        private float valueX = 0;
+        private float value; // change this one to type double if you need the extra precision
+
+        public Slider ( float xx, float yy, float ww, float hh ) {
+            x = xx;
+            y = yy;
+            width = ww;
+            height = hh;
+
+            valueX = x;
+
+            // register it
+            Interactive.add( this );
+        }
+
+        // called from manager
+        public void mouseDragged ( float mx, float my, float dx, float dy ) {
+            valueX = mx - height/2;
+
+            if ( valueX < x ) valueX = x;
+            if ( valueX > x+width-height ) valueX = x+width-height;
+
+            value = map( valueX, x, x+width-height, 0, 1 );
+        }
+
+        public void draw () {
+            noStroke();
+
+            fill( 100 );
+            rect(x, y, width, height);
+
+            fill( 120 );
+            rect( valueX, y, height, height );
+        }
+    }
+    */
+    /*
+    System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        Mat mat = Mat.eye(3, 3, CvType.CV_8UC1);
+        System.out.println("mat = " + mat.dump());
+
+
+    public void toggleFilter() {
         filterOn = !filterOn;
     }
 
@@ -48,6 +130,7 @@ public class ImageProcessor extends PApplet {
                 frame = null;
             }*/
 
+    /*
     private static final float[][] logMatrix = {
             { 0, 0,  1 , 0, 0 },
             { 0, 1,  2 , 1, 0 },
@@ -247,7 +330,7 @@ public class ImageProcessor extends PApplet {
         return result;
     }
 
-
+    */
 
 
 
