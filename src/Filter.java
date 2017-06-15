@@ -57,6 +57,7 @@ class Erode extends Filter implements ControlListener {
     public Filter init(ControlP5 cp5,  PApplet sketch) {
         return new Erode(cp5, sketch);
     }
+
 }
 
 class Dilate extends Filter {

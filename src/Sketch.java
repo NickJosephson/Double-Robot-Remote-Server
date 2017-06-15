@@ -11,7 +11,7 @@ import java.util.Map;
  * Created by Nicholas on 2017-05-12.
  *
  */
-public class Sketch extends PApplet implements ControlListener{
+public class Sketch extends PApplet implements ControlListener {
     private static final int DEFAULT_PORT = 4000;
     private static final int FPS = 30;
     private static final int WINDOW_WIDTH = (int) (640 * 1.5);
