@@ -11,6 +11,7 @@ import java.util.Map;
  * Created by Nicholas on 2017-05-12.
  *
  */
+
 public class Sketch extends PApplet implements ControlListener {
     private static final int DEFAULT_PORT = 4000;
     private static final int FPS = 30;
@@ -55,7 +56,7 @@ public class Sketch extends PApplet implements ControlListener {
         setupGUI();
         setupServer();
         setConnected(false);
-        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        //System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
     public void draw() {
@@ -89,9 +90,27 @@ public class Sketch extends PApplet implements ControlListener {
      *************************************/
 
     private void setupGUI() {
-        String[] filterNames = new String[]{"Dilate", "Erode", "Line", "Bilateral", "None"};
-        filterTypes = new Filter[]{new Dilate(cp5, this), new Erode(cp5, this), new Line(cp5, this), new Bilateral(cp5, this), null};
+        filterTypes = new Filter[] {
+                new Dilate(cp5, this),
+                new Erode(cp5, this),
+                new Bilateral(cp5, this),
+                new CannyEdge(cp5, this),
+                new SobelEdge(cp5, this),
+                new ScharrEdge(cp5, this),
+                new Threshold(cp5, this),
+                new Contrast(cp5, this),
+                null
+        };
+        String[] filterNames = new String[filterTypes.length];
+        for (int j = 0; j < filterNames.length - 1; j++) {
+            if (filterTypes[j] != null) {
+                filterNames[j] = filterTypes[j].getName();
+            }
+        }
+        filterNames[filterNames.length - 1] = "None";
+
         cp5 = new ControlP5(this);
+
 
         cp5.addButton("toggleFiltering")
                 .setBroadcast(false)
@@ -127,7 +146,8 @@ public class Sketch extends PApplet implements ControlListener {
             }
 
             if (filterTypes[newTypeIndex] != null) {
-                filters[filterIndex] = filterTypes[newTypeIndex].init(cp5, this);
+                filters[filterIndex] = filterTypes[newTypeIndex].newInstance(cp5, this);
+                //filters[filterIndex] = filterTypes[newTypeIndex].getClass().newInstance();  //cp5, this);
                 filters[filterIndex].createUI(filterIndex * (WINDOW_WIDTH / NUM_FILTERS), VIDEO_HEIGHT + 25, (WINDOW_WIDTH / NUM_FILTERS), WINDOW_HEIGHT - VIDEO_HEIGHT);
             } else {
                 filters[filterIndex] = null;
@@ -144,7 +164,7 @@ public class Sketch extends PApplet implements ControlListener {
     private synchronized void processFrame() {
         for (Filter currFilter : filters) {
             if (currFilter != null) {
-                currFilter.applyFilter(frameToProcess);
+                frameToProcess = currFilter.applyFilter(frameToProcess, null);
             }
         }
 

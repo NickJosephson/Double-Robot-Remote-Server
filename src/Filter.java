@@ -1,51 +1,84 @@
 import controlP5.*;
+import gab.opencv.OpenCV;
 import processing.core.PApplet;
-import processing.core.PConstants;
 import processing.core.PImage;
 
 /**
  * Created by Nicholas on 2017-06-12.
+ *
  */
 public abstract class Filter {
-    public ControlP5 cp5;
-    public PApplet sketch;
+    private ControlP5 cp5;
+    private PApplet sketch;
 
     public Filter(ControlP5 cp5, PApplet sketch) {
         this.cp5 = cp5;
         this.sketch = sketch;
     }
 
-    abstract void applyFilter(PImage image);
+    abstract PImage applyFilter(PImage source, PImage destination);
+
     abstract void createUI(int x, int y, int width, int height);
     abstract void destroyUI();
-    abstract Filter init(ControlP5 cp5,  PApplet sketch);
+
+    abstract Filter newInstance(ControlP5 cp5, PApplet sketch);
+
+    abstract String getName();
+
+    public ControlP5 getCP5() {
+        return cp5;
+    }
+
+    public PApplet getSketch() {
+        return sketch;
+    }
+
 }
 
 class Erode extends Filter implements ControlListener {
-    private Button test;
+    private OpenCV cv;
+    private Slider test;
+    private int strength = 1;
 
     public Erode(ControlP5 cp5,  PApplet sketch) {
         super(cp5, sketch);
     }
 
-    public void applyFilter(PImage image) {
-        image.filter(PConstants.ERODE);
+    public PImage applyFilter(PImage source, PImage destination) {
+        if (cv == null) {
+            cv = new OpenCV(getSketch(), source);
+        } else {
+            cv.loadImage(source);
+        }
+
+        for (int i = 0; i < strength; i++) {
+            cv.erode();
+        }
+
+        return cv.getOutput();
     }
 
     public void createUI(int x, int y, int width, int height) {
-        test = super.cp5.addButton("test" + x).setBroadcast(false)
-                .setLabel("test")
-                .setPosition(x + 5, y + 20)
-                .setSize(75,15)
+        test = getCP5().addSlider("erode"+x)
+                .setBroadcast(false)
+                .setPosition(x + 5,y + 30)
+                .setSize(width - 10,20)
+                .setLabel("Strength")
+                .setRange(1,10)
+                .setNumberOfTickMarks(10)
+                .setSliderMode(Slider.FLEXIBLE)
                 .addListener(this)
                 .setBroadcast(true)
         ;
+
+        test.getCaptionLabel().align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0);
+
     }
 
     public void controlEvent(ControlEvent theEvent) {
         if (theEvent.isController()) {
-            if (theEvent.getController() instanceof Button) {
-                //sketch.exit();
+            if (theEvent.getController() instanceof Slider) {
+                strength = (int) theEvent.getController().getValue();
             }
         }
     }
@@ -54,126 +87,498 @@ class Erode extends Filter implements ControlListener {
         test.remove();
     }
 
-    public Filter init(ControlP5 cp5,  PApplet sketch) {
+    public String getName() {
+        return "Erode";
+    }
+
+    public Filter newInstance(ControlP5 cp5, PApplet sketch) {
         return new Erode(cp5, sketch);
     }
 
 }
 
-class Dilate extends Filter {
+class Dilate extends Filter implements ControlListener {
+    private OpenCV cv;
+    private Slider test;
+    private int strength = 1;
+
     public Dilate(ControlP5 cp5,  PApplet sketch) {
         super(cp5, sketch);
     }
 
-    public void applyFilter(PImage image) {
-        image.filter(PConstants.DILATE);
+    public PImage applyFilter(PImage source, PImage destination) {
+        if (cv == null) {
+            cv = new OpenCV(getSketch(), source);
+        } else {
+            cv.loadImage(source);
+        }
+
+        for (int i = 0; i < strength; i++) {
+            cv.dilate();
+        }
+
+        return cv.getOutput();
     }
 
     public void createUI(int x, int y, int width, int height) {
+        test = getCP5().addSlider("dilate"+x)
+                .setBroadcast(false)
+                .setPosition(x + 5,y + 30)
+                .setSize(width - 10,20)
+                .setLabel("Strength")
+                .setRange(1,10)
+                .setNumberOfTickMarks(10)
+                .setSliderMode(Slider.FLEXIBLE)
+                .addListener(this)
+                .setBroadcast(true)
+        ;
 
+        test.getCaptionLabel().align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0);
+
+    }
+
+    public void controlEvent(ControlEvent theEvent) {
+        if (theEvent.isController()) {
+            if (theEvent.getController() instanceof Slider) {
+                strength = (int) theEvent.getController().getValue();
+            }
+        }
     }
 
     public void destroyUI() {
-
+        test.remove();
     }
 
-    public Filter init(ControlP5 cp5,  PApplet sketch) {
+    public String getName() {
+        return "Dilate";
+    }
+
+    public Filter newInstance(ControlP5 cp5, PApplet sketch) {
         return new Dilate(cp5, sketch);
     }
+
 }
 
-class Bilateral extends Filter {
+class Bilateral extends Filter implements ControlListener {
+    private OpenCV cv;
+    private Slider dSlider;
+    private Slider sigmaColourSlider;
+    private Slider sigmaSpaceSlider;
+    private int d = 5;
+    private double sigmaColour = 150;
+    private double sigmaSpace = 150;
+
+
     public Bilateral(ControlP5 cp5,  PApplet sketch) {
         super(cp5, sketch);
     }
 
-    public void applyFilter(PImage image) {
-        image.filter(PConstants.GRAY);
+    public PImage applyFilter(PImage source, PImage destination) {
+        if (cv == null) {
+            cv = new OpenCV(getSketch(), source);
+        } else {
+            cv.loadImage(source);
+        }
+
+        cv.bilateralFilter(d, sigmaColour, sigmaSpace);
+
+        return cv.getOutput();
     }
 
     public void createUI(int x, int y, int width, int height) {
+        dSlider = getCP5().addSlider("d"+x)
+                .setBroadcast(false)
+                .setPosition(x + 5,y + 15)
+                .setSize(width - 10,10)
+                .setLabel("d")
+                .setRange(1,10)
+                .setNumberOfTickMarks(10)
+                .setSliderMode(Slider.FLEXIBLE)
+                .addListener(this)
+                .setBroadcast(true)
+        ;
+        dSlider.getCaptionLabel().align(ControlP5.RIGHT, ControlP5.RIGHT).setPaddingX(0);
 
+        sigmaColourSlider = getCP5().addSlider("sigmaColour"+x)
+                .setBroadcast(false)
+                .setPosition(x + 5,y + 30)
+                .setSize(width - 10,10)
+                .setLabel("Sigma Colour")
+                .setRange(0,300)
+                .setSliderMode(Slider.FLEXIBLE)
+                .addListener(this)
+                .setBroadcast(true)
+        ;
+        sigmaColourSlider.getCaptionLabel().align(ControlP5.RIGHT, ControlP5.RIGHT).setPaddingX(0);
+
+        sigmaSpaceSlider = getCP5().addSlider("sigmaSpace"+x)
+                .setBroadcast(false)
+                .setPosition(x + 5,y + 45)
+                .setSize(width - 10,10)
+                .setLabel("Sigma Space")
+                .setRange(0,300)
+                .setSliderMode(Slider.FLEXIBLE)
+                .addListener(this)
+                .setBroadcast(true)
+        ;
+        sigmaSpaceSlider.getCaptionLabel().align(ControlP5.RIGHT, ControlP5.RIGHT).setPaddingX(0);
+    }
+
+    public void controlEvent(ControlEvent theEvent) {
+        if (theEvent.isController()) {
+            if (theEvent.getController() instanceof Slider) {
+                if (theEvent.getController().getLabel().equals("d")) {
+                    d = (int) theEvent.getController().getValue();
+                } else if (theEvent.getController().getLabel().equals("Sigma Colour")) {
+                    sigmaColour = theEvent.getController().getValue();
+                } else {
+                    sigmaSpace = theEvent.getController().getValue();
+                }
+            }
+        }
     }
 
     public void destroyUI() {
-
+        dSlider.remove();
+        sigmaColourSlider.remove();
+        sigmaSpaceSlider.remove();
     }
 
-    public Filter init(ControlP5 cp5,  PApplet sketch) {
+    public String getName() {
+        return "Bilateral";
+    }
+
+    public Filter newInstance(ControlP5 cp5, PApplet sketch) {
         return new Bilateral(cp5, sketch);
     }
+
 }
 
-class Line extends Filter {
-    public Line(ControlP5 cp5,  PApplet sketch) {
+class CannyEdge extends Filter implements ControlListener {
+    private OpenCV cv;
+    private Slider lowerSlider;
+    private Slider upperSlider;
+    private int lower = 0;
+    private int upper = 0;
+
+    public CannyEdge(ControlP5 cp5,  PApplet sketch) {
         super(cp5, sketch);
     }
 
-    public void applyFilter(PImage image) {
-        image.filter(PConstants.THRESHOLD);
+    public PImage applyFilter(PImage source, PImage destination) {
+        if (cv == null) {
+            cv = new OpenCV(getSketch(), source);
+        } else {
+            cv.loadImage(source);
+        }
+
+        cv.findCannyEdges(lower, upper);
+
+        return cv.getOutput();
     }
 
     public void createUI(int x, int y, int width, int height) {
+        lowerSlider = getCP5().addSlider("lowerSlider"+x)
+                .setBroadcast(false)
+                .setPosition(x + 5,y + 15)
+                .setSize(width - 10,20)
+                .setLabel("Lower bound")
+                .setRange(1,255)
+                .setSliderMode(Slider.FLEXIBLE)
+                .addListener(this)
+                .setBroadcast(true)
+        ;
+        lowerSlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0);
 
+        upperSlider = getCP5().addSlider("upperSlider"+x)
+                .setBroadcast(false)
+                .setPosition(x + 5,y + 50)
+                .setSize(width - 10,20)
+                .setLabel("Upper bound")
+                .setRange(1,255)
+                .setSliderMode(Slider.FLEXIBLE)
+                .addListener(this)
+                .setBroadcast(true)
+        ;
+        upperSlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0);
+    }
+
+    public void controlEvent(ControlEvent theEvent) {
+        if (theEvent.isController()) {
+            if (theEvent.getController() instanceof Slider) {
+                if (theEvent.getController().getLabel().equals("Lower bound")) {
+                    lower = (int) theEvent.getController().getValue();
+                } else {
+                    upper = (int) theEvent.getController().getValue();
+                }
+            }
+        }
     }
 
     public void destroyUI() {
-
+        lowerSlider.remove();
+        upperSlider.remove();
     }
 
-    public Filter init(ControlP5 cp5,  PApplet sketch) {
-        return new Line(cp5, sketch);
+    public String getName() {
+        return "Canny Edge";
     }
+
+    public Filter newInstance(ControlP5 cp5, PApplet sketch) {
+        return new CannyEdge(cp5, sketch);
+    }
+
 }
 
+class SobelEdge extends Filter implements ControlListener {
+    private OpenCV cv;
+    private Slider dxSlider;
+    private Slider dySlider;
+    private int dx = 1;
+    private int dy = 1;
 
-     /*
-        slider = cp5.addSlider("sliderValue")
-                .setPosition(100,VIDEO_HEIGHT + 25)
-                .setRange(0,10)
-        ;
+    public SobelEdge(ControlP5 cp5,  PApplet sketch) {
+        super(cp5, sketch);
+    }
 
+    public PImage applyFilter(PImage source, PImage destination) {
+        if (cv == null) {
+            cv = new OpenCV(getSketch(), source);
+        } else {
+            cv.loadImage(source);
+        }
 
-        range = cp5.addRange("rangeController")
-                // disable broadcasting since setRange and setRangeValues will trigger an event
+        cv.findSobelEdges(dx, dy);
+
+        return cv.getOutput();
+    }
+
+    public void createUI(int x, int y, int width, int height) {
+        dxSlider = getCP5().addSlider("dx"+x)
                 .setBroadcast(false)
-                .setPosition(50,VIDEO_HEIGHT + 50)
-                .setSize(400,40)
-                .setHandleSize(20)
-                .setRange(0,255)
-                .setRangeValues(50,100)
-                // after the initialization we turn broadcast back on again
+                .setPosition(x + 5,y + 15)
+                .setSize(width - 10,20)
+                .setLabel("dx")
+                .setRange(0,2)
+                .setNumberOfTickMarks(3)
+                .setSliderMode(Slider.FLEXIBLE)
+                .addListener(this)
                 .setBroadcast(true)
-                .setColorForeground(color(255,40))
-                .setColorBackground(color(255,40))
         ;
-        */
+        dxSlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0);
 
-//cv.getOutput();
+        dySlider = getCP5().addSlider("dy"+x)
+                .setBroadcast(false)
+                .setPosition(x + 5,y + 50)
+                .setSize(width - 10,20)
+                .setLabel("dy")
+                .setRange(0,2)
+                .setNumberOfTickMarks(3)
+                .setSliderMode(Slider.FLEXIBLE)
+                .addListener(this)
+                .setBroadcast(true)
+        ;
+        dySlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0);
+    }
 
-//private OpenCV cv;
+    public void controlEvent(ControlEvent theEvent) {
+        if (theEvent.isController()) {
+            if (theEvent.getController() instanceof Slider) {
+                if (theEvent.getController().getLabel().equals("dx")) {
+                    dx = (int) theEvent.getController().getValue();
+                } else {
+                    dy = (int) theEvent.getController().getValue();
+                }
+            }
+        }
+    }
 
-//if (cv == null) {
-//  cv = new OpenCV(this, frameToProcess);
-//}
+    public void destroyUI() {
+        dxSlider.remove();
+        dySlider.remove();
+    }
 
-//cv.loadImage(frameToProcess);
-//for(Filter currFilter:filters)
+    public String getName() {
+        return "Sobel Edge";
+    }
 
-//cv.contrast(sliderValue);
-//cv.findCannyEdges((int)range.getArrayValue(0), (int)range.getArrayValue(1));
+    public Filter newInstance(ControlP5 cp5, PApplet sketch) {
+        return new SobelEdge(cp5, sketch);
+    }
 
-//cv.findCannyEdges(mouseX, mouseY);
-//cv.findSobelEdges(1,1);
-//cv.gray();
-//cv.dilate();
-//System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-//Mat mat = Mat.eye(3, 3, CvType.CV_8UC1);
-//System.out.println("mat = " + mat.dump());
-//cv.bilateralFilter();
-//Mat stuff = cv.getColor();
-//cv.toCv(frameToProcess, stuff);
+}
 
-//Imgproc.bilateralFilter(stuff, stuff, 5, 150, 150);
+class ScharrEdge extends Filter implements ControlListener {
+    private OpenCV cv;
+    private Slider directionSlider;
+    private int direction = -1;
 
-//cv.toPImage(stuff, frameToDraw);
+    public ScharrEdge(ControlP5 cp5,  PApplet sketch) {
+        super(cp5, sketch);
+    }
+
+    public PImage applyFilter(PImage source, PImage destination) {
+        if (cv == null) {
+            cv = new OpenCV(getSketch(), source);
+        } else {
+            cv.loadImage(source);
+        }
+
+        cv.findScharrEdges(direction);
+
+        return cv.getOutput();
+    }
+
+    public void createUI(int x, int y, int width, int height) {
+        directionSlider = getCP5().addSlider("directionSlider"+x)
+                .setBroadcast(false)
+                .setPosition(x + 5,y + 15)
+                .setSize(width - 10,20)
+                .setLabel("Direction")
+                .setRange(-1,1)
+                .setNumberOfTickMarks(3)
+                .setSliderMode(Slider.FLEXIBLE)
+                .addListener(this)
+                .setBroadcast(true)
+        ;
+        directionSlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0);
+
+    }
+
+    public void controlEvent(ControlEvent theEvent) {
+        if (theEvent.isController()) {
+            if (theEvent.getController() instanceof Slider) {
+                direction = (int) theEvent.getController().getValue();
+            }
+        }
+    }
+
+    public void destroyUI() {
+        directionSlider.remove();
+    }
+
+    public String getName() {
+        return "Scharr Edge";
+    }
+
+    public Filter newInstance(ControlP5 cp5, PApplet sketch) {
+        return new ScharrEdge(cp5, sketch);
+    }
+
+}
+
+class Threshold extends Filter implements ControlListener {
+    private OpenCV cv;
+    private Slider thresholdSlider;
+    private int threshold = -1;
+
+    public Threshold(ControlP5 cp5,  PApplet sketch) {
+        super(cp5, sketch);
+    }
+
+    public PImage applyFilter(PImage source, PImage destination) {
+        if (cv == null) {
+            cv = new OpenCV(getSketch(), source);
+        } else {
+            cv.loadImage(source);
+        }
+
+        cv.threshold(threshold);
+
+        return cv.getOutput();
+    }
+
+    public void createUI(int x, int y, int width, int height) {
+        thresholdSlider = getCP5().addSlider("amount"+x)
+                .setBroadcast(false)
+                .setPosition(x + 5,y + 15)
+                .setSize(width - 10,20)
+                .setLabel("Threshold")
+                .setRange(0,255)
+                .setSliderMode(Slider.FLEXIBLE)
+                .addListener(this)
+                .setBroadcast(true)
+        ;
+        thresholdSlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0);
+
+    }
+
+    public void controlEvent(ControlEvent theEvent) {
+        if (theEvent.isController()) {
+            if (theEvent.getController() instanceof Slider) {
+                threshold = (int) theEvent.getController().getValue();
+            }
+        }
+    }
+
+    public void destroyUI() {
+        thresholdSlider.remove();
+    }
+
+    public String getName() {
+        return "Thresholde";
+    }
+
+    public Filter newInstance(ControlP5 cp5, PApplet sketch) {
+        return new Threshold(cp5, sketch);
+    }
+
+}
+
+class Contrast extends Filter implements ControlListener {
+    private OpenCV cv;
+    private Slider amountSlider;
+    private float amount = 0;
+
+    public Contrast(ControlP5 cp5,  PApplet sketch) {
+        super(cp5, sketch);
+    }
+
+    public PImage applyFilter(PImage source, PImage destination) {
+        if (cv == null) {
+            cv = new OpenCV(getSketch(), source);
+        } else {
+            cv.loadImage(source);
+        }
+
+        cv.contrast(amount);
+
+        return cv.getOutput();
+    }
+
+    public void createUI(int x, int y, int width, int height) {
+        amountSlider = getCP5().addSlider("amount"+x)
+                .setBroadcast(false)
+                .setPosition(x + 5,y + 15)
+                .setSize(width - 10,20)
+                .setLabel("Contrast")
+                .setRange(0,30)
+                .setSliderMode(Slider.FLEXIBLE)
+                .addListener(this)
+                .setBroadcast(true)
+        ;
+        amountSlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0);
+
+    }
+
+    public void controlEvent(ControlEvent theEvent) {
+        if (theEvent.isController()) {
+            if (theEvent.getController() instanceof Slider) {
+                amount = (float) theEvent.getController().getValue();
+            }
+        }
+    }
+
+    public void destroyUI() {
+        amountSlider.remove();
+    }
+
+    public String getName() {
+        return "Contrast";
+    }
+
+    public Filter newInstance(ControlP5 cp5, PApplet sketch) {
+        return new Contrast(cp5, sketch);
+    }
+
+}
