@@ -1,52 +1,26 @@
 import controlP5.*;
 import gab.opencv.OpenCV;
-import processing.core.PApplet;
 import processing.core.PImage;
 
 /**
  * Created by Nicholas on 2017-06-12.
  *
  */
-public abstract class Filter {
-    private ControlP5 cp5;
-    private PApplet sketch;
 
-    public Filter(ControlP5 cp5, PApplet sketch) {
-        this.cp5 = cp5;
-        this.sketch = sketch;
-    }
-
+public abstract class Filter implements java.io.Serializable {
     abstract PImage applyFilter(PImage source, PImage destination);
-
     abstract void createUI(int x, int y, int width, int height);
     abstract void destroyUI();
-
-    abstract Filter newInstance(ControlP5 cp5, PApplet sketch);
-
-    abstract String getName();
-
-    public ControlP5 getCP5() {
-        return cp5;
-    }
-
-    public PApplet getSketch() {
-        return sketch;
-    }
-
 }
 
 class Erode extends Filter implements ControlListener {
-    private OpenCV cv;
-    private Slider test;
+    private transient OpenCV cv;
+    private transient Slider test;
     private int strength = 1;
-
-    public Erode(ControlP5 cp5,  PApplet sketch) {
-        super(cp5, sketch);
-    }
 
     public PImage applyFilter(PImage source, PImage destination) {
         if (cv == null) {
-            cv = new OpenCV(getSketch(), source);
+            cv = new OpenCV(Sketch.sharedSketch, source);
         } else {
             cv.loadImage(source);
         }
@@ -59,7 +33,7 @@ class Erode extends Filter implements ControlListener {
     }
 
     public void createUI(int x, int y, int width, int height) {
-        test = getCP5().addSlider("erode"+x)
+        test = Sketch.sharedCP5.addSlider("erode"+x)
                 .setBroadcast(false)
                 .setPosition(x + 5,y + 30)
                 .setSize(width - 10,20)
@@ -87,28 +61,16 @@ class Erode extends Filter implements ControlListener {
         test.remove();
     }
 
-    public String getName() {
-        return "Erode";
-    }
-
-    public Filter newInstance(ControlP5 cp5, PApplet sketch) {
-        return new Erode(cp5, sketch);
-    }
-
 }
 
 class Dilate extends Filter implements ControlListener {
-    private OpenCV cv;
-    private Slider test;
+    private transient OpenCV cv;
+    private transient Slider test;
     private int strength = 1;
-
-    public Dilate(ControlP5 cp5,  PApplet sketch) {
-        super(cp5, sketch);
-    }
 
     public PImage applyFilter(PImage source, PImage destination) {
         if (cv == null) {
-            cv = new OpenCV(getSketch(), source);
+            cv = new OpenCV(Sketch.sharedSketch, source);
         } else {
             cv.loadImage(source);
         }
@@ -121,7 +83,7 @@ class Dilate extends Filter implements ControlListener {
     }
 
     public void createUI(int x, int y, int width, int height) {
-        test = getCP5().addSlider("dilate"+x)
+        test = Sketch.sharedCP5.addSlider("dilate"+x)
                 .setBroadcast(false)
                 .setPosition(x + 5,y + 30)
                 .setSize(width - 10,20)
@@ -149,33 +111,20 @@ class Dilate extends Filter implements ControlListener {
         test.remove();
     }
 
-    public String getName() {
-        return "Dilate";
-    }
-
-    public Filter newInstance(ControlP5 cp5, PApplet sketch) {
-        return new Dilate(cp5, sketch);
-    }
-
 }
 
 class Bilateral extends Filter implements ControlListener {
-    private OpenCV cv;
-    private Slider dSlider;
-    private Slider sigmaColourSlider;
-    private Slider sigmaSpaceSlider;
+    private transient OpenCV cv;
+    private transient Slider dSlider;
+    private transient Slider sigmaColourSlider;
+    private transient Slider sigmaSpaceSlider;
     private int d = 5;
     private double sigmaColour = 150;
     private double sigmaSpace = 150;
 
-
-    public Bilateral(ControlP5 cp5,  PApplet sketch) {
-        super(cp5, sketch);
-    }
-
     public PImage applyFilter(PImage source, PImage destination) {
         if (cv == null) {
-            cv = new OpenCV(getSketch(), source);
+            cv = new OpenCV(Sketch.sharedSketch, source);
         } else {
             cv.loadImage(source);
         }
@@ -186,7 +135,7 @@ class Bilateral extends Filter implements ControlListener {
     }
 
     public void createUI(int x, int y, int width, int height) {
-        dSlider = getCP5().addSlider("d"+x)
+        dSlider = Sketch.sharedCP5.addSlider("d"+x)
                 .setBroadcast(false)
                 .setPosition(x + 5,y + 15)
                 .setSize(width - 10,10)
@@ -199,7 +148,7 @@ class Bilateral extends Filter implements ControlListener {
         ;
         dSlider.getCaptionLabel().align(ControlP5.RIGHT, ControlP5.RIGHT).setPaddingX(0);
 
-        sigmaColourSlider = getCP5().addSlider("sigmaColour"+x)
+        sigmaColourSlider = Sketch.sharedCP5.addSlider("sigmaColour"+x)
                 .setBroadcast(false)
                 .setPosition(x + 5,y + 30)
                 .setSize(width - 10,10)
@@ -211,7 +160,7 @@ class Bilateral extends Filter implements ControlListener {
         ;
         sigmaColourSlider.getCaptionLabel().align(ControlP5.RIGHT, ControlP5.RIGHT).setPaddingX(0);
 
-        sigmaSpaceSlider = getCP5().addSlider("sigmaSpace"+x)
+        sigmaSpaceSlider = Sketch.sharedCP5.addSlider("sigmaSpace"+x)
                 .setBroadcast(false)
                 .setPosition(x + 5,y + 45)
                 .setSize(width - 10,10)
@@ -244,30 +193,18 @@ class Bilateral extends Filter implements ControlListener {
         sigmaSpaceSlider.remove();
     }
 
-    public String getName() {
-        return "Bilateral";
-    }
-
-    public Filter newInstance(ControlP5 cp5, PApplet sketch) {
-        return new Bilateral(cp5, sketch);
-    }
-
 }
 
 class CannyEdge extends Filter implements ControlListener {
-    private OpenCV cv;
-    private Slider lowerSlider;
-    private Slider upperSlider;
+    private transient OpenCV cv;
+    private transient Slider lowerSlider;
+    private transient Slider upperSlider;
     private int lower = 0;
     private int upper = 0;
 
-    public CannyEdge(ControlP5 cp5,  PApplet sketch) {
-        super(cp5, sketch);
-    }
-
     public PImage applyFilter(PImage source, PImage destination) {
         if (cv == null) {
-            cv = new OpenCV(getSketch(), source);
+            cv = new OpenCV(Sketch.sharedSketch, source);
         } else {
             cv.loadImage(source);
         }
@@ -278,7 +215,7 @@ class CannyEdge extends Filter implements ControlListener {
     }
 
     public void createUI(int x, int y, int width, int height) {
-        lowerSlider = getCP5().addSlider("lowerSlider"+x)
+        lowerSlider = Sketch.sharedCP5.addSlider("lowerSlider"+x)
                 .setBroadcast(false)
                 .setPosition(x + 5,y + 15)
                 .setSize(width - 10,20)
@@ -290,7 +227,7 @@ class CannyEdge extends Filter implements ControlListener {
         ;
         lowerSlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0);
 
-        upperSlider = getCP5().addSlider("upperSlider"+x)
+        upperSlider = Sketch.sharedCP5.addSlider("upperSlider"+x)
                 .setBroadcast(false)
                 .setPosition(x + 5,y + 50)
                 .setSize(width - 10,20)
@@ -320,30 +257,18 @@ class CannyEdge extends Filter implements ControlListener {
         upperSlider.remove();
     }
 
-    public String getName() {
-        return "Canny Edge";
-    }
-
-    public Filter newInstance(ControlP5 cp5, PApplet sketch) {
-        return new CannyEdge(cp5, sketch);
-    }
-
 }
 
 class SobelEdge extends Filter implements ControlListener {
-    private OpenCV cv;
-    private Slider dxSlider;
-    private Slider dySlider;
+    private transient OpenCV cv;
+    private transient Slider dxSlider;
+    private transient Slider dySlider;
     private int dx = 1;
     private int dy = 1;
 
-    public SobelEdge(ControlP5 cp5,  PApplet sketch) {
-        super(cp5, sketch);
-    }
-
     public PImage applyFilter(PImage source, PImage destination) {
         if (cv == null) {
-            cv = new OpenCV(getSketch(), source);
+            cv = new OpenCV(Sketch.sharedSketch, source);
         } else {
             cv.loadImage(source);
         }
@@ -354,7 +279,7 @@ class SobelEdge extends Filter implements ControlListener {
     }
 
     public void createUI(int x, int y, int width, int height) {
-        dxSlider = getCP5().addSlider("dx"+x)
+        dxSlider = Sketch.sharedCP5.addSlider("dx"+x)
                 .setBroadcast(false)
                 .setPosition(x + 5,y + 15)
                 .setSize(width - 10,20)
@@ -367,7 +292,7 @@ class SobelEdge extends Filter implements ControlListener {
         ;
         dxSlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0);
 
-        dySlider = getCP5().addSlider("dy"+x)
+        dySlider = Sketch.sharedCP5.addSlider("dy"+x)
                 .setBroadcast(false)
                 .setPosition(x + 5,y + 50)
                 .setSize(width - 10,20)
@@ -398,28 +323,16 @@ class SobelEdge extends Filter implements ControlListener {
         dySlider.remove();
     }
 
-    public String getName() {
-        return "Sobel Edge";
-    }
-
-    public Filter newInstance(ControlP5 cp5, PApplet sketch) {
-        return new SobelEdge(cp5, sketch);
-    }
-
 }
 
 class ScharrEdge extends Filter implements ControlListener {
-    private OpenCV cv;
-    private Slider directionSlider;
+    private transient OpenCV cv;
+    private transient Slider directionSlider;
     private int direction = -1;
-
-    public ScharrEdge(ControlP5 cp5,  PApplet sketch) {
-        super(cp5, sketch);
-    }
 
     public PImage applyFilter(PImage source, PImage destination) {
         if (cv == null) {
-            cv = new OpenCV(getSketch(), source);
+            cv = new OpenCV(Sketch.sharedSketch, source);
         } else {
             cv.loadImage(source);
         }
@@ -430,7 +343,7 @@ class ScharrEdge extends Filter implements ControlListener {
     }
 
     public void createUI(int x, int y, int width, int height) {
-        directionSlider = getCP5().addSlider("directionSlider"+x)
+        directionSlider = Sketch.sharedCP5.addSlider("directionSlider"+x)
                 .setBroadcast(false)
                 .setPosition(x + 5,y + 15)
                 .setSize(width - 10,20)
@@ -442,7 +355,6 @@ class ScharrEdge extends Filter implements ControlListener {
                 .setBroadcast(true)
         ;
         directionSlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0);
-
     }
 
     public void controlEvent(ControlEvent theEvent) {
@@ -457,28 +369,16 @@ class ScharrEdge extends Filter implements ControlListener {
         directionSlider.remove();
     }
 
-    public String getName() {
-        return "Scharr Edge";
-    }
-
-    public Filter newInstance(ControlP5 cp5, PApplet sketch) {
-        return new ScharrEdge(cp5, sketch);
-    }
-
 }
 
 class Threshold extends Filter implements ControlListener {
-    private OpenCV cv;
-    private Slider thresholdSlider;
+    private transient OpenCV cv;
+    private transient Slider thresholdSlider;
     private int threshold = -1;
-
-    public Threshold(ControlP5 cp5,  PApplet sketch) {
-        super(cp5, sketch);
-    }
 
     public PImage applyFilter(PImage source, PImage destination) {
         if (cv == null) {
-            cv = new OpenCV(getSketch(), source);
+            cv = new OpenCV(Sketch.sharedSketch, source);
         } else {
             cv.loadImage(source);
         }
@@ -489,7 +389,7 @@ class Threshold extends Filter implements ControlListener {
     }
 
     public void createUI(int x, int y, int width, int height) {
-        thresholdSlider = getCP5().addSlider("amount"+x)
+        thresholdSlider = Sketch.sharedCP5.addSlider("amount"+x)
                 .setBroadcast(false)
                 .setPosition(x + 5,y + 15)
                 .setSize(width - 10,20)
@@ -500,7 +400,6 @@ class Threshold extends Filter implements ControlListener {
                 .setBroadcast(true)
         ;
         thresholdSlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0);
-
     }
 
     public void controlEvent(ControlEvent theEvent) {
@@ -515,28 +414,16 @@ class Threshold extends Filter implements ControlListener {
         thresholdSlider.remove();
     }
 
-    public String getName() {
-        return "Thresholde";
-    }
-
-    public Filter newInstance(ControlP5 cp5, PApplet sketch) {
-        return new Threshold(cp5, sketch);
-    }
-
 }
 
 class Contrast extends Filter implements ControlListener {
-    private OpenCV cv;
-    private Slider amountSlider;
+    private transient OpenCV cv;
+    private transient Slider amountSlider;
     private float amount = 0;
-
-    public Contrast(ControlP5 cp5,  PApplet sketch) {
-        super(cp5, sketch);
-    }
 
     public PImage applyFilter(PImage source, PImage destination) {
         if (cv == null) {
-            cv = new OpenCV(getSketch(), source);
+            cv = new OpenCV(Sketch.sharedSketch, source);
         } else {
             cv.loadImage(source);
         }
@@ -547,7 +434,7 @@ class Contrast extends Filter implements ControlListener {
     }
 
     public void createUI(int x, int y, int width, int height) {
-        amountSlider = getCP5().addSlider("amount"+x)
+        amountSlider = Sketch.sharedCP5.addSlider("amount"+x)
                 .setBroadcast(false)
                 .setPosition(x + 5,y + 15)
                 .setSize(width - 10,20)
@@ -558,7 +445,6 @@ class Contrast extends Filter implements ControlListener {
                 .setBroadcast(true)
         ;
         amountSlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0);
-
     }
 
     public void controlEvent(ControlEvent theEvent) {
@@ -571,14 +457,6 @@ class Contrast extends Filter implements ControlListener {
 
     public void destroyUI() {
         amountSlider.remove();
-    }
-
-    public String getName() {
-        return "Contrast";
-    }
-
-    public Filter newInstance(ControlP5 cp5, PApplet sketch) {
-        return new Contrast(cp5, sketch);
     }
 
 }

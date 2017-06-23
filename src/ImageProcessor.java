@@ -35,6 +35,9 @@ public class ImageProcessor {
         ;
         */
 
+    //System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+
+
 //cv.getOutput();
 
 //private OpenCV cv;
