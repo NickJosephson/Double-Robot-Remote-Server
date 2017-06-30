@@ -8,14 +8,17 @@ import processing.core.PImage;
  */
 
 public abstract class Filter implements java.io.Serializable {
+    public static OpenCV cv;
+
     abstract PImage applyFilter(PImage source, PImage destination);
+    abstract void setParameters(String parameters);
+    abstract String getParameters();
     abstract void createUI(int x, int y, int width, int height);
     abstract void destroyUI();
 }
 
 class Erode extends Filter implements ControlListener {
-    private transient OpenCV cv;
-    private transient Slider test;
+    private Slider strengthSlider;
     private int strength = 1;
 
     public PImage applyFilter(PImage source, PImage destination) {
@@ -33,20 +36,20 @@ class Erode extends Filter implements ControlListener {
     }
 
     public void createUI(int x, int y, int width, int height) {
-        test = Sketch.sharedCP5.addSlider("erode"+x)
+        strengthSlider = Sketch.sharedCP5.addSlider("erode"+x)
                 .setBroadcast(false)
                 .setPosition(x + 5,y + 30)
                 .setSize(width - 10,20)
                 .setLabel("Strength")
                 .setRange(1,10)
                 .setNumberOfTickMarks(10)
+                .setValue(strength)
                 .setSliderMode(Slider.FLEXIBLE)
                 .addListener(this)
                 .setBroadcast(true)
         ;
 
-        test.getCaptionLabel().align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0);
-
+        strengthSlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0);
     }
 
     public void controlEvent(ControlEvent theEvent) {
@@ -58,14 +61,21 @@ class Erode extends Filter implements ControlListener {
     }
 
     public void destroyUI() {
-        test.remove();
+        strengthSlider.remove();
+    }
+
+    public void setParameters(String parameters) {
+        strength = Integer.parseInt(parameters.split(":")[1]);
+    }
+
+    public String getParameters() {
+        return "strength:" + strength;
     }
 
 }
 
 class Dilate extends Filter implements ControlListener {
-    private transient OpenCV cv;
-    private transient Slider test;
+    private Slider strengthSlider;
     private int strength = 1;
 
     public PImage applyFilter(PImage source, PImage destination) {
@@ -83,19 +93,20 @@ class Dilate extends Filter implements ControlListener {
     }
 
     public void createUI(int x, int y, int width, int height) {
-        test = Sketch.sharedCP5.addSlider("dilate"+x)
+        strengthSlider = Sketch.sharedCP5.addSlider("dilate"+x)
                 .setBroadcast(false)
                 .setPosition(x + 5,y + 30)
                 .setSize(width - 10,20)
                 .setLabel("Strength")
                 .setRange(1,10)
                 .setNumberOfTickMarks(10)
+                .setValue(strength)
                 .setSliderMode(Slider.FLEXIBLE)
                 .addListener(this)
                 .setBroadcast(true)
         ;
 
-        test.getCaptionLabel().align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0);
+        strengthSlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0);
 
     }
 
@@ -108,19 +119,26 @@ class Dilate extends Filter implements ControlListener {
     }
 
     public void destroyUI() {
-        test.remove();
+        strengthSlider.remove();
+    }
+
+    public void setParameters(String parameters) {
+        strength = Integer.parseInt(parameters.split(":")[1]);
+    }
+
+    public String getParameters() {
+        return "strength:" + strength;
     }
 
 }
 
 class Bilateral extends Filter implements ControlListener {
-    private transient OpenCV cv;
-    private transient Slider dSlider;
-    private transient Slider sigmaColourSlider;
-    private transient Slider sigmaSpaceSlider;
+    private Slider dSlider;
+    private Slider sigmaColourSlider;
+    private Slider sigmaSpaceSlider;
     private int d = 5;
-    private double sigmaColour = 150;
-    private double sigmaSpace = 150;
+    private float sigmaColour = 150;
+    private float sigmaSpace = 150;
 
     public PImage applyFilter(PImage source, PImage destination) {
         if (cv == null) {
@@ -142,6 +160,7 @@ class Bilateral extends Filter implements ControlListener {
                 .setLabel("d")
                 .setRange(1,10)
                 .setNumberOfTickMarks(10)
+                .setValue(d)
                 .setSliderMode(Slider.FLEXIBLE)
                 .addListener(this)
                 .setBroadcast(true)
@@ -154,6 +173,7 @@ class Bilateral extends Filter implements ControlListener {
                 .setSize(width - 10,10)
                 .setLabel("Sigma Colour")
                 .setRange(0,300)
+                .setValue(sigmaColour)
                 .setSliderMode(Slider.FLEXIBLE)
                 .addListener(this)
                 .setBroadcast(true)
@@ -166,6 +186,7 @@ class Bilateral extends Filter implements ControlListener {
                 .setSize(width - 10,10)
                 .setLabel("Sigma Space")
                 .setRange(0,300)
+                .setValue(sigmaSpace)
                 .setSliderMode(Slider.FLEXIBLE)
                 .addListener(this)
                 .setBroadcast(true)
@@ -193,12 +214,22 @@ class Bilateral extends Filter implements ControlListener {
         sigmaSpaceSlider.remove();
     }
 
+    public void setParameters(String parameters) {
+        String[] values = parameters.split(",");
+        d = Integer.parseInt(values[0].split(":")[1]);
+        sigmaColour = Float.parseFloat(values[1].split(":")[1]);
+        sigmaSpace = Float.parseFloat(values[2].split(":")[1]);
+    }
+
+    public String getParameters() {
+        return "d:"+ d +",sigmaColour:"+ sigmaColour +",sigmaSpace:"+ sigmaSpace;
+    }
+
 }
 
 class CannyEdge extends Filter implements ControlListener {
-    private transient OpenCV cv;
-    private transient Slider lowerSlider;
-    private transient Slider upperSlider;
+    private Slider lowerSlider;
+    private Slider upperSlider;
     private int lower = 0;
     private int upper = 0;
 
@@ -221,6 +252,7 @@ class CannyEdge extends Filter implements ControlListener {
                 .setSize(width - 10,20)
                 .setLabel("Lower bound")
                 .setRange(1,255)
+                .setValue(lower)
                 .setSliderMode(Slider.FLEXIBLE)
                 .addListener(this)
                 .setBroadcast(true)
@@ -233,6 +265,7 @@ class CannyEdge extends Filter implements ControlListener {
                 .setSize(width - 10,20)
                 .setLabel("Upper bound")
                 .setRange(1,255)
+                .setValue(upper)
                 .setSliderMode(Slider.FLEXIBLE)
                 .addListener(this)
                 .setBroadcast(true)
@@ -257,12 +290,21 @@ class CannyEdge extends Filter implements ControlListener {
         upperSlider.remove();
     }
 
+    public void setParameters(String parameters) {
+        String[] values = parameters.split(",");
+        lower = Integer.parseInt(values[0].split(":")[1]);
+        upper = Integer.parseInt(values[1].split(":")[1]);
+    }
+
+    public String getParameters() {
+        return "lower:"+ lower +",upper:"+ upper;
+    }
+
 }
 
 class SobelEdge extends Filter implements ControlListener {
-    private transient OpenCV cv;
-    private transient Slider dxSlider;
-    private transient Slider dySlider;
+    private Slider dxSlider;
+    private Slider dySlider;
     private int dx = 1;
     private int dy = 1;
 
@@ -286,6 +328,7 @@ class SobelEdge extends Filter implements ControlListener {
                 .setLabel("dx")
                 .setRange(0,2)
                 .setNumberOfTickMarks(3)
+                .setValue(dx)
                 .setSliderMode(Slider.FLEXIBLE)
                 .addListener(this)
                 .setBroadcast(true)
@@ -297,6 +340,7 @@ class SobelEdge extends Filter implements ControlListener {
                 .setPosition(x + 5,y + 50)
                 .setSize(width - 10,20)
                 .setLabel("dy")
+                .setValue(dy)
                 .setRange(0,2)
                 .setNumberOfTickMarks(3)
                 .setSliderMode(Slider.FLEXIBLE)
@@ -323,11 +367,20 @@ class SobelEdge extends Filter implements ControlListener {
         dySlider.remove();
     }
 
+    public void setParameters(String parameters) {
+        String[] values = parameters.split(",");
+        dx = Integer.parseInt(values[0].split(":")[1]);
+        dy = Integer.parseInt(values[1].split(":")[1]);
+    }
+
+    public String getParameters() {
+        return "dx:"+ dx +",dy:"+ dy;
+    }
+
 }
 
 class ScharrEdge extends Filter implements ControlListener {
-    private transient OpenCV cv;
-    private transient Slider directionSlider;
+    private Slider directionSlider;
     private int direction = -1;
 
     public PImage applyFilter(PImage source, PImage destination) {
@@ -350,6 +403,7 @@ class ScharrEdge extends Filter implements ControlListener {
                 .setLabel("Direction")
                 .setRange(-1,1)
                 .setNumberOfTickMarks(3)
+                .setValue(direction)
                 .setSliderMode(Slider.FLEXIBLE)
                 .addListener(this)
                 .setBroadcast(true)
@@ -369,12 +423,19 @@ class ScharrEdge extends Filter implements ControlListener {
         directionSlider.remove();
     }
 
+    public void setParameters(String parameters) {
+        direction = Integer.parseInt(parameters.split(":")[1]);
+    }
+
+    public String getParameters() {
+        return "direction:" + direction;
+    }
+
 }
 
 class Threshold extends Filter implements ControlListener {
-    private transient OpenCV cv;
-    private transient Slider thresholdSlider;
-    private int threshold = -1;
+    private Slider thresholdSlider;
+    private int threshold = 0;
 
     public PImage applyFilter(PImage source, PImage destination) {
         if (cv == null) {
@@ -395,6 +456,7 @@ class Threshold extends Filter implements ControlListener {
                 .setSize(width - 10,20)
                 .setLabel("Threshold")
                 .setRange(0,255)
+                .setValue(threshold)
                 .setSliderMode(Slider.FLEXIBLE)
                 .addListener(this)
                 .setBroadcast(true)
@@ -414,11 +476,18 @@ class Threshold extends Filter implements ControlListener {
         thresholdSlider.remove();
     }
 
+    public void setParameters(String parameters) {
+        threshold = Integer.parseInt(parameters.split(":")[1]);
+    }
+
+    public String getParameters() {
+        return "threshold:" + threshold;
+    }
+
 }
 
 class Contrast extends Filter implements ControlListener {
-    private transient OpenCV cv;
-    private transient Slider amountSlider;
+    private Slider amountSlider;
     private float amount = 0;
 
     public PImage applyFilter(PImage source, PImage destination) {
@@ -440,6 +509,7 @@ class Contrast extends Filter implements ControlListener {
                 .setSize(width - 10,20)
                 .setLabel("Contrast")
                 .setRange(0,30)
+                .setValue(amount)
                 .setSliderMode(Slider.FLEXIBLE)
                 .addListener(this)
                 .setBroadcast(true)
@@ -457,6 +527,14 @@ class Contrast extends Filter implements ControlListener {
 
     public void destroyUI() {
         amountSlider.remove();
+    }
+
+    public void setParameters(String parameters) {
+        amount = Integer.parseInt(parameters.split(":")[1]);
+    }
+
+    public String getParameters() {
+        return "amount:" + amount;
     }
 
 }

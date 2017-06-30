@@ -6,6 +6,7 @@ import java.io.*;
 import java.net.*;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Scanner;
 
 /**
  * Created by Nicholas on 2017-05-12.
@@ -17,7 +18,7 @@ public class Sketch extends PApplet implements ControlListener {
     public static PApplet sharedSketch = null;
 
     private static final int DEFAULT_PORT = 4000;
-    private static final int FPS = 30;
+    private static final int FPS = 15;
     private static final int WINDOW_WIDTH = (int) (640 * 1.5);
     private static final int VIDEO_HEIGHT = (int) (480 * 1.5);
     private static final int WINDOW_HEIGHT = VIDEO_HEIGHT + 100;
@@ -128,7 +129,7 @@ public class Sketch extends PApplet implements ControlListener {
                 .setBroadcast(true)
         ;
 
-        cp5.addButton("loadFilters")
+        cp5.addButton("loadFiltersGUI")
                 .setBroadcast(false)
                 .setLabel("Load")
                 .setPosition(WINDOW_WIDTH - 160,VIDEO_HEIGHT - 20)
@@ -136,7 +137,7 @@ public class Sketch extends PApplet implements ControlListener {
                 .setBroadcast(true)
         ;
 
-        cp5.addButton("saveFilters")
+        cp5.addButton("saveFiltersGUI")
                 .setBroadcast(false)
                 .setLabel("Save")
                 .setPosition(WINDOW_WIDTH - 80,VIDEO_HEIGHT - 20)
@@ -192,75 +193,6 @@ public class Sketch extends PApplet implements ControlListener {
         }
     }
 
-    public void loadFilters() {
-        //Create a file chooser
-        JFileChooser fc = new JFileChooser();
-
-        //In response to a button click:
-        //int returnVal = fc.showOpenDialog(null);
-        if (fc.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
-            try {
-                FileInputStream fileIn = new FileInputStream(fc.getSelectedFile());
-                ObjectInputStream in = new ObjectInputStream(fileIn);
-
-                for (int i = 0; i < currFilters.length; i++) {
-                    try {
-                        if (currFilters[i] != null) {
-                            currFilters[i].destroyUI();
-                        }
-                        if (in.available() > 0) {
-                            currFilters[i] = (Filter) in.readObject();
-                        } else {
-                            currFilters[i] = null;
-                        }
-
-                        if (currFilters[i] != null) {
-                            currFilters[i].createUI(
-                                    i * (WINDOW_WIDTH / NUM_FILTERS),
-                                    VIDEO_HEIGHT + 25, (WINDOW_WIDTH / NUM_FILTERS),
-                                    WINDOW_HEIGHT - VIDEO_HEIGHT
-                            );
-                        }
-                    } catch(ClassNotFoundException c) {
-                        currFilters[i] = null;
-                    }
-                }
-
-                in.close();
-                fileIn.close();
-            }catch(IOException i) {
-                System.out.println(i.getMessage());
-                //i.printStackTrace();
-            }
-        }
-    }
-
-    public void saveFilters() {
-        JFileChooser fc = new JFileChooser();
-
-        //In response to a button click:
-        //int returnVal = fc.showOpenDialog(null);
-        if (fc.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
-            try {
-                FileOutputStream fileOut = new FileOutputStream(fc.getSelectedFile());
-                ObjectOutputStream out = new ObjectOutputStream(fileOut);
-
-
-                for (int i = 0; i < currFilters.length; i++) {
-                    if (currFilters[i] != null) {
-                        out.writeObject(currFilters[i]);
-                    }
-                }
-
-                out.close();
-                fileOut.close();
-            }catch(IOException i) {
-                System.out.println(i.getMessage());
-                //i.printStackTrace();
-            }
-        }
-    }
-
     /*************************************
      *         Frame Processing          *
      *************************************/
@@ -274,6 +206,127 @@ public class Sketch extends PApplet implements ControlListener {
 
         frameToDraw = frameToProcess;
         frameToProcess = null;
+    }
+
+    private Filter getFilterInstance(String filterName) {
+        Filter result = null;
+
+        if (!filterName.equals("NONE")) {
+            for (int i = 0; i < filterTypes.length-1 && result == null; i++) {
+                if (filterName.equals(filterTypes[i].getName())) {
+                    try {
+                        result = (Filter) filterTypes[i].newInstance();
+                    } catch (ReflectiveOperationException e) {
+                        System.out.println("Cannot instantiate filter named \""+ filterName +"\": "+ e.getMessage());
+                        return null;
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private void changeFilters(Filter[] newFilters) {
+        try {
+            if (newFilters.length != NUM_FILTERS) {
+                throw new Exception("Number of filters in list doesn't match NUM_FILTERS");
+            }
+
+            for (int i = 0; i < newFilters.length; i++) {
+                if (currFilters[i] != null) {
+                    currFilters[i].destroyUI();
+                }
+
+                currFilters[i] = newFilters[i];
+
+                dropdownLists[i].close();
+
+                if (newFilters[i] == null) {
+                    dropdownLists[i].setLabel("None");
+                } else {
+                    dropdownLists[i].setLabel(newFilters[i].getClass().getName());
+                    currFilters[i].createUI(
+                            i * (WINDOW_WIDTH / NUM_FILTERS),
+                            VIDEO_HEIGHT + 25, (WINDOW_WIDTH / NUM_FILTERS),
+                            WINDOW_HEIGHT - VIDEO_HEIGHT
+                    );
+                }
+
+                dropdownLists[i].bringToFront();
+            }
+        } catch(Exception e) {
+            System.out.println("Couldn't change filters: "+ e.getMessage());
+        }
+    }
+
+    private Filter[] loadFilters(File file) {
+        Filter[] newFilters = null;
+
+        try {
+            Scanner fileIn = new Scanner(file);
+
+            newFilters = new Filter[fileIn.nextInt()];
+            fileIn.nextLine();
+
+            for (int i = 0; i < newFilters.length; i++) {
+                newFilters[i] = getFilterInstance(fileIn.nextLine());
+                if (newFilters[i] != null) {
+                    newFilters[i].setParameters(fileIn.nextLine());
+                }
+            }
+
+            fileIn.close();
+        } catch(Exception e) {
+            System.out.println("Couldn't process filter file: "+ e.getMessage());
+            newFilters = null;
+        }
+
+        return newFilters;
+    }
+
+    private void saveCurrFilters(File file) {
+        try {
+            BufferedWriter fileOut = new BufferedWriter(new FileWriter(file));
+
+            fileOut.write(""+ currFilters.length);
+            fileOut.newLine();
+
+            for (int i = 0; i < currFilters.length; i++) {
+                if (currFilters[i] != null) {
+                    fileOut.write(currFilters[i].getClass().getName());
+                    fileOut.newLine();
+                    fileOut.write(currFilters[i].getParameters());
+                } else {
+                    fileOut.write("NONE");
+                }
+                fileOut.newLine();
+            }
+
+            fileOut.close();
+        }catch(IOException i) {
+            System.out.println("Couldn't save filters: "+ i.getMessage());
+        }
+    }
+
+    public void loadFiltersGUI() {
+        //Create a file chooser
+        JFileChooser fc = new JFileChooser();
+
+        //In response to a button click:
+        if (fc.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+            changeFilters(loadFilters(fc.getSelectedFile()));
+        }
+    }
+
+    public void saveFiltersGUI() {
+        //Create a file chooser
+        JFileChooser fc = new JFileChooser();
+
+        //In response to a button click:
+        if (fc.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
+            saveCurrFilters(fc.getSelectedFile());
+        }
     }
 
     public synchronized void setFrame(PImage newFrame) {

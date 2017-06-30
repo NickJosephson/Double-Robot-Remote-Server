@@ -9,6 +9,5 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" exported="" name="core" level="application" />
     <orderEntry type="library" name="opencv-245" level="application" />
-    <orderEntry type="library" name="phidget21" level="project" />
   </component>
 </module>
