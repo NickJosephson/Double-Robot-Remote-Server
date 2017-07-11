@@ -530,7 +530,7 @@ class Contrast extends Filter implements ControlListener {
     }
 
     public void setParameters(String parameters) {
-        amount = Integer.parseInt(parameters.split(":")[1]);
+        amount = Float.parseFloat(parameters.split(":")[1]);
     }
 
     public String getParameters() {

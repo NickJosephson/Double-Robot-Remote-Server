@@ -41,6 +41,8 @@ public class KeyThread extends Thread{
             sketch.switchFav(4);
         } else if (Key.setFav.wasReleased()) {
             sketch.setFavorite();
+        } else if (Key.resetFav.wasReleased()) {
+            sketch.resetFavorite();
         }
     }
 }

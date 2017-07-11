@@ -224,7 +224,7 @@ public class Sketch extends PApplet implements ControlListener {
     }
 
     public synchronized void resetFavorite() {
-        loadFilters(new File("./favorites/EMPTY"));
+        changeFilters(loadFilters(new File("./favorites/EMPTY")));
         saveCurrFilters(new File("./favorites/"+ (currFav + 1)));
         favFilters[currFav] = loadFilters(new File("./favorites/"+ (currFav + 1)));
         changeFilters(favFilters[currFav]);
@@ -286,7 +286,7 @@ public class Sketch extends PApplet implements ControlListener {
         Filter result = null;
 
         if (!filterName.equals("NONE")) {
-            for (int i = 0; i < filterTypes.length-1 && result == null; i++) {
+            for (int i = 0; i < filterTypes.length && result == null; i++) {
                 if (filterName.equals(filterTypes[i].getName())) {
                     try {
                         result = (Filter) filterTypes[i].newInstance();
@@ -316,7 +316,7 @@ public class Sketch extends PApplet implements ControlListener {
 
                 dropdownLists[i].close();
 
-                if (newFilters[i] == null) {
+                if (currFilters[i] == null) {
                     dropdownLists[i].setLabel("None");
                 } else {
                     dropdownLists[i].setLabel(newFilters[i].getClass().getName());
@@ -477,6 +477,7 @@ public class Sketch extends PApplet implements ControlListener {
         keyMap.put('4', Key.fav4);
         keyMap.put('5', Key.fav5);
         keyMap.put('r', Key.setFav);
+        keyMap.put('t', Key.resetFav);
 
         new KeyThread(this).start();
     }

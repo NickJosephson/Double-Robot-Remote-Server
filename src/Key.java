@@ -18,6 +18,7 @@ public class Key{
     public static Key fav4 = new Key();
     public static Key fav5 = new Key();
     public static Key setFav = new Key();
+    public static Key resetFav = new Key();
 
     private boolean isDown = false;
     private boolean wasDown = false;
