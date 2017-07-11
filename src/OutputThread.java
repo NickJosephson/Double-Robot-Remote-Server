@@ -29,55 +29,46 @@ public class OutputThread extends Thread{
     private void handleKeys() {
         String toSend = "z";
 
-        //while (toSend != 'y') {
-            //toSend = 'z';
-            if (Key.park.wasPressed()) {
-                toSend = "p";
-            } else if (Key.stop.wasPressed()) {
-                toSend = "x";
-            } else if (Key.forward.wasReleased()) {
-                toSend = "s";
-            } else if (Key.back.wasReleased()) {
-                toSend = "s";
-            } else if (Key.left.wasReleased()) {
-                toSend = "t";
-            } else if (Key.right.wasReleased()) {
-                toSend = "t";
-            } else if (Key.forward.wasPressed()) {
-                toSend = "f";
-            } else if (Key.back.wasPressed()) {
-                toSend = "b";
-            } else if (Key.left.wasPressed()) {
-                toSend = "l";
-            } else if (Key.right.wasPressed()) {
-                toSend = "r";
-            } else if (Key.up.wasReleased()) {
-                toSend = "h";
-            } else if (Key.up.wasPressed()) {
-                toSend = "u";
-            } else if (Key.down.wasReleased()) {
-                toSend = "h";
-            } else if (Key.down.wasPressed()) {
-                toSend = "d";
-            } else if (Key.filterToggle.wasReleased()) {
-                sketch.toggleFiltering();
-            } else if (Key.blendToggle.wasReleased()) {
-                //sketch.toggleBlend();
-            } else {
-                toSend = "y";
-            }
+        if (Key.park.wasPressed()) {
+            toSend = "p";
+        } else if (Key.stop.wasPressed()) {
+            toSend = "x";
+        } else if (Key.forward.wasReleased()) {
+            toSend = "s";
+        } else if (Key.back.wasReleased()) {
+            toSend = "s";
+        } else if (Key.left.wasReleased()) {
+            toSend = "t";
+        } else if (Key.right.wasReleased()) {
+            toSend = "t";
+        } else if (Key.forward.wasPressed()) {
+            toSend = "f";
+        } else if (Key.back.wasPressed()) {
+            toSend = "b";
+        } else if (Key.left.wasPressed()) {
+            toSend = "l";
+        } else if (Key.right.wasPressed()) {
+            toSend = "r";
+        } else if (Key.up.wasReleased()) {
+            toSend = "h";
+        } else if (Key.up.wasPressed()) {
+            toSend = "u";
+        } else if (Key.down.wasReleased()) {
+            toSend = "h";
+        } else if (Key.down.wasPressed()) {
+            toSend = "d";
+        }
 
-            if (!toSend.equals("z") && !toSend.equals("y")) {
-                try {
-                    writer.write(toSend);
-                    writer.flush();
-                    System.out.print(toSend);
-                } catch (IOException e) {
-                    System.out.println("Disconnected: " + e.getMessage());
-                    keepFetching = false;
-                    sketch.setConnected(false);
-                }
+        if (!toSend.equals("z")) {
+            try {
+                writer.write(toSend);
+                writer.flush();
+                System.out.print(toSend);
+            } catch (IOException e) {
+                System.out.println("Disconnected: " + e.getMessage());
+                keepFetching = false;
+                sketch.setConnected(false);
             }
-     //   }
+        }
     }
 }

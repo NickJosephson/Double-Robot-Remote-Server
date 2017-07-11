@@ -12,6 +12,12 @@ public class Key{
     public static Key down = new Key();
     public static Key filterToggle = new Key();
     public static Key blendToggle = new Key();
+    public static Key fav1 = new Key();
+    public static Key fav2 = new Key();
+    public static Key fav3 = new Key();
+    public static Key fav4 = new Key();
+    public static Key fav5 = new Key();
+    public static Key setFav = new Key();
 
     private boolean isDown = false;
     private boolean wasDown = false;

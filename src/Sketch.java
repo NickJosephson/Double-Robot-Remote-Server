@@ -33,6 +33,9 @@ public class Sketch extends PApplet implements ControlListener {
     private boolean applyFilters = false;
 
     private ControlP5 cp5;
+    private Button[] favButtons = new Button[5];
+    private Filter[][] favFilters = new Filter[5][];
+    private int currFav = 0;
     private ScrollableList[] dropdownLists = new ScrollableList[NUM_FILTERS];
     private Filter[] currFilters = new Filter[NUM_FILTERS];
     private Class[] filterTypes = {
@@ -72,6 +75,8 @@ public class Sketch extends PApplet implements ControlListener {
 
         sharedSketch = this;
         sharedCP5 = cp5;
+
+        changeFilters(favFilters[currFav]);
     }
 
     public void draw() {
@@ -79,6 +84,7 @@ public class Sketch extends PApplet implements ControlListener {
         drawCameraView();
         drawConnectionStatus();
         drawLines();
+        drawFavSelection();
     }
 
     private void drawCameraView() {
@@ -110,6 +116,17 @@ public class Sketch extends PApplet implements ControlListener {
         }
     }
 
+    private void drawFavSelection() {
+        fill(255);
+        noStroke();
+        rect(
+                (WINDOW_WIDTH/3) + (currFav*((WINDOW_WIDTH/3)/ favButtons.length)),
+                VIDEO_HEIGHT - 20,
+                ((WINDOW_WIDTH/3)/ favButtons.length),
+                19
+        );
+    }
+
     /*************************************
      *              CP5 GUI              *
      *************************************/
@@ -117,6 +134,7 @@ public class Sketch extends PApplet implements ControlListener {
     private void setupGUI() {
         cp5 = new ControlP5(this);
         setupButtons();
+        setupFavButtons();
         setupDropdowns();
     }
 
@@ -168,6 +186,55 @@ public class Sketch extends PApplet implements ControlListener {
         }
     }
 
+    private void setupFavButtons() {
+        cp5.addButton("setFavorite")
+                .setBroadcast(false)
+                .setLabel("set")
+                .setPosition((WINDOW_WIDTH/3) - 30,VIDEO_HEIGHT - 20)
+                .setSize(20,15)
+                .setBroadcast(true)
+        ;
+
+        cp5.addButton("resetFavorite")
+                .setBroadcast(false)
+                .setLabel("reset")
+                .setPosition((WINDOW_WIDTH/3) - 65,VIDEO_HEIGHT - 20)
+                .setSize(30,15)
+                .setBroadcast(true)
+        ;
+
+        for (int i = 0; i < favButtons.length; i++) {
+            favButtons[i] = cp5.addButton("fav"+i)
+                    .setBroadcast(false)
+                    .setLabel(""+(i+1))
+                    .setPosition((WINDOW_WIDTH/3) + (i*((WINDOW_WIDTH/3)/ favButtons.length)),VIDEO_HEIGHT - 20)
+                    .setSize(((WINDOW_WIDTH/3)/ favButtons.length),15)
+                    .addListener(this)
+                    .setBroadcast(true)
+            ;
+
+            favFilters[i] = loadFilters(new File("./favorites/"+ (i+1)));
+        }
+    }
+
+    public synchronized void setFavorite() {
+        saveCurrFilters(new File("./favorites/"+ (currFav + 1)));
+        favFilters[currFav] = loadFilters(new File("./favorites/"+ (currFav + 1)));
+        changeFilters(favFilters[currFav]);
+    }
+
+    public synchronized void resetFavorite() {
+        loadFilters(new File("./favorites/EMPTY"));
+        saveCurrFilters(new File("./favorites/"+ (currFav + 1)));
+        favFilters[currFav] = loadFilters(new File("./favorites/"+ (currFav + 1)));
+        changeFilters(favFilters[currFav]);
+    }
+
+    public synchronized void switchFav(int newFav) {
+        currFav = newFav;
+        changeFilters(favFilters[currFav]);
+    }
+
     public void controlEvent(ControlEvent theEvent) {
         if (theEvent.isController() && theEvent.getController() instanceof ScrollableList) {
             int filterIndex = Integer.parseInt(theEvent.getName());
@@ -181,7 +248,7 @@ public class Sketch extends PApplet implements ControlListener {
                 try {
                     currFilters[filterIndex] = (Filter) filterTypes[newTypeIndex].newInstance();
                 } catch (ReflectiveOperationException e) {
-                    System.out.println("Couldn't assign filter: "+ e.getMessage());
+                    System.out.println("Couldn't assign filter: " + e.getMessage());
                 }
 
                 currFilters[filterIndex].createUI(filterIndex * (WINDOW_WIDTH / NUM_FILTERS), VIDEO_HEIGHT + 25, (WINDOW_WIDTH / NUM_FILTERS), WINDOW_HEIGHT - VIDEO_HEIGHT);
@@ -190,6 +257,13 @@ public class Sketch extends PApplet implements ControlListener {
             }
 
             ((ScrollableList) theEvent.getController()).bringToFront();
+        }
+
+        if (theEvent.isController() && theEvent.getController() instanceof Button) {
+            if (theEvent.getName().substring(0,3).equals("fav")) {
+                currFav = Integer.parseInt(theEvent.getName().substring(3));
+                changeFilters(favFilters[currFav]);
+            }
         }
     }
 
@@ -397,6 +471,14 @@ public class Sketch extends PApplet implements ControlListener {
         keyMap.put('j', Key.down);
         keyMap.put('f', Key.filterToggle);
         keyMap.put('v', Key.blendToggle);
+        keyMap.put('1', Key.fav1);
+        keyMap.put('2', Key.fav2);
+        keyMap.put('3', Key.fav3);
+        keyMap.put('4', Key.fav4);
+        keyMap.put('5', Key.fav5);
+        keyMap.put('r', Key.setFav);
+
+        new KeyThread(this).start();
     }
 
     public void keyReleased() {
