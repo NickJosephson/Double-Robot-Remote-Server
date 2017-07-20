@@ -12,7 +12,6 @@ import java.util.Scanner;
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 
-
 /**
  * Created by Nicholas on 2017-05-12.
  *

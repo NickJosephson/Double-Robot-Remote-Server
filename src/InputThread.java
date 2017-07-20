@@ -1,17 +1,10 @@
-import org.opencv.imgproc.Imgproc;
 import processing.core.PApplet;
-import processing.core.*;
-import sun.awt.image.ToolkitImage;
 import org.opencv.core.*;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
-import java.awt.image.DataBufferInt;
-import java.awt.image.ImageProducer;
 import java.io.*;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 /**
  * Created by Nicholas on 2017-05-19.
