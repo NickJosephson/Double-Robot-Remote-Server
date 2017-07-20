@@ -1,7 +1,17 @@
+import org.opencv.imgproc.Imgproc;
 import processing.core.PApplet;
 import processing.core.*;
+import sun.awt.image.ToolkitImage;
+import org.opencv.core.*;
 import javax.swing.*;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
+import java.awt.image.DataBufferInt;
+import java.awt.image.ImageProducer;
 import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
  * Created by Nicholas on 2017-05-19.
@@ -61,7 +71,23 @@ public class InputThread extends Thread {
 
         //create and display image
         if (bytes != null) {
-            sketch.setFrame(new PImage(new ImageIcon(bytes).getImage()));
+            Image image = new ImageIcon(bytes).getImage();
+
+            // Create a buffered image without transparency
+            BufferedImage bimage = new BufferedImage(image.getWidth(null), image.getHeight(null), BufferedImage.TYPE_3BYTE_BGR);
+
+            // Draw the image on to the buffered image
+            Graphics2D bGr = bimage.createGraphics();
+            bGr.drawImage(image, 0, 0, null);
+            bGr.dispose();
+
+            // Create Mat(rix) and cop raster data to it
+            Mat mat = new Mat(bimage.getHeight(), bimage.getWidth(), CvType.CV_8UC3);
+            byte[] data = ((DataBufferByte) bimage.getRaster().getDataBuffer()).getData();
+            mat.put(0, 0, data);
+
+            // Update sketch Frame Mat
+            sketch.setFrame(mat); //new PImage(image));
         }
     }
 }

@@ -1,6 +1,9 @@
 import controlP5.*;
-import gab.opencv.OpenCV;
-import processing.core.PImage;
+import org.opencv.core.Core;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Scalar;
+import org.opencv.imgproc.Imgproc;
 
 /**
  * Created by Nicholas on 2017-06-12.
@@ -8,31 +11,29 @@ import processing.core.PImage;
  */
 
 public abstract class Filter implements java.io.Serializable {
-    public static OpenCV cv;
+    public static Object cv;
 
-    abstract PImage applyFilter(PImage source, PImage destination);
-    abstract void setParameters(String parameters);
-    abstract String getParameters();
-    abstract void createUI(int x, int y, int width, int height);
-    abstract void destroyUI();
+    public abstract void applyFilter(Mat source, Mat destination);
+    public abstract void setParameters(String parameters);
+    public abstract String getParameters();
+    public abstract void createUI(int x, int y, int width, int height);
+    public abstract void destroyUI();
 }
 
 class Erode extends Filter implements ControlListener {
     private Slider strengthSlider;
     private int strength = 1;
 
-    public PImage applyFilter(PImage source, PImage destination) {
-        if (cv == null) {
-            cv = new OpenCV(Sketch.sharedSketch, source);
-        } else {
-            cv.loadImage(source);
-        }
+    public void applyFilter(Mat source, Mat destination) {
+        Mat temp;
 
         for (int i = 0; i < strength; i++) {
-            cv.erode();
-        }
+            Imgproc.erode(source, destination, new Mat());
 
-        return cv.getOutput();
+            temp = source;
+            source = destination;
+            destination = temp;
+        }
     }
 
     public void createUI(int x, int y, int width, int height) {
@@ -78,18 +79,16 @@ class Dilate extends Filter implements ControlListener {
     private Slider strengthSlider;
     private int strength = 1;
 
-    public PImage applyFilter(PImage source, PImage destination) {
-        if (cv == null) {
-            cv = new OpenCV(Sketch.sharedSketch, source);
-        } else {
-            cv.loadImage(source);
-        }
+    public void applyFilter(Mat source, Mat destination) {
+        Mat temp;
 
         for (int i = 0; i < strength; i++) {
-            cv.dilate();
-        }
+            Imgproc.dilate(source, destination, new Mat());
 
-        return cv.getOutput();
+            temp = source;
+            source = destination;
+            destination = temp;
+        }
     }
 
     public void createUI(int x, int y, int width, int height) {
@@ -140,16 +139,8 @@ class Bilateral extends Filter implements ControlListener {
     private float sigmaColour = 150;
     private float sigmaSpace = 150;
 
-    public PImage applyFilter(PImage source, PImage destination) {
-        if (cv == null) {
-            cv = new OpenCV(Sketch.sharedSketch, source);
-        } else {
-            cv.loadImage(source);
-        }
-
-        cv.bilateralFilter(d, sigmaColour, sigmaSpace);
-
-        return cv.getOutput();
+    public void applyFilter(Mat source, Mat destination) {
+        Imgproc.bilateralFilter(source, destination, d, sigmaColour, sigmaSpace);
     }
 
     public void createUI(int x, int y, int width, int height) {
@@ -233,16 +224,8 @@ class CannyEdge extends Filter implements ControlListener {
     private int lower = 0;
     private int upper = 0;
 
-    public PImage applyFilter(PImage source, PImage destination) {
-        if (cv == null) {
-            cv = new OpenCV(Sketch.sharedSketch, source);
-        } else {
-            cv.loadImage(source);
-        }
-
-        cv.findCannyEdges(lower, upper);
-
-        return cv.getOutput();
+    public void applyFilter(Mat source, Mat destination) {
+        Imgproc.Canny(source, destination, lower, upper);
     }
 
     public void createUI(int x, int y, int width, int height) {
@@ -308,16 +291,10 @@ class SobelEdge extends Filter implements ControlListener {
     private int dx = 1;
     private int dy = 1;
 
-    public PImage applyFilter(PImage source, PImage destination) {
-        if (cv == null) {
-            cv = new OpenCV(Sketch.sharedSketch, source);
-        } else {
-            cv.loadImage(source);
-        }
-
-        cv.findSobelEdges(dx, dy);
-
-        return cv.getOutput();
+    public void applyFilter(Mat source, Mat destination) {
+        Mat sobeled = new Mat(source.height(), source.width(), CvType.CV_32F);
+        Imgproc.Sobel(source, sobeled, CvType.CV_32F, dx, dy);
+        sobeled.convertTo(destination, source.type());
     }
 
     public void createUI(int x, int y, int width, int height) {
@@ -383,16 +360,22 @@ class ScharrEdge extends Filter implements ControlListener {
     private Slider directionSlider;
     private int direction = -1;
 
-    public PImage applyFilter(PImage source, PImage destination) {
-        if (cv == null) {
-            cv = new OpenCV(Sketch.sharedSketch, source);
-        } else {
-            cv.loadImage(source);
+    public void applyFilter(Mat source, Mat destination) {
+        if(direction == 1){
+            Imgproc.Scharr(source, destination, -1, 1, 0 );
         }
 
-        cv.findScharrEdges(direction);
+        if(direction == 0){
+            Imgproc.Scharr(source, destination, -1, 0, 1 );
+        }
 
-        return cv.getOutput();
+        if(direction == -1){
+            Mat hMat = new Mat(source.height(), source.width(), source.type());
+            Mat vMat = new Mat(source.height(), source.width(), source.type());
+            Imgproc.Scharr(source, hMat, -1, 1, 0 );
+            Imgproc.Scharr(source, vMat, -1, 0, 1 );
+            Core.add(vMat,hMat, destination);
+        }
     }
 
     public void createUI(int x, int y, int width, int height) {
@@ -437,16 +420,8 @@ class Threshold extends Filter implements ControlListener {
     private Slider thresholdSlider;
     private int threshold = 0;
 
-    public PImage applyFilter(PImage source, PImage destination) {
-        if (cv == null) {
-            cv = new OpenCV(Sketch.sharedSketch, source);
-        } else {
-            cv.loadImage(source);
-        }
-
-        cv.threshold(threshold);
-
-        return cv.getOutput();
+    public void applyFilter(Mat source, Mat destination) {
+        Imgproc.threshold(source, destination, threshold, 255, Imgproc.THRESH_BINARY);
     }
 
     public void createUI(int x, int y, int width, int height) {
@@ -490,16 +465,11 @@ class Contrast extends Filter implements ControlListener {
     private Slider amountSlider;
     private float amount = 0;
 
-    public PImage applyFilter(PImage source, PImage destination) {
-        if (cv == null) {
-            cv = new OpenCV(Sketch.sharedSketch, source);
-        } else {
-            cv.loadImage(source);
-        }
+    public void applyFilter(Mat source, Mat destination) {
+        Scalar modifier;
+        modifier = new Scalar(amount,amount,amount,1);
 
-        cv.contrast(amount);
-
-        return cv.getOutput();
+        Core.multiply(source, modifier, destination);
     }
 
     public void createUI(int x, int y, int width, int height) {

@@ -28,7 +28,7 @@ public class KeyThread extends Thread{
         if (Key.filterToggle.wasReleased()) {
             sketch.toggleFiltering();
         } else if (Key.blendToggle.wasReleased()) {
-            //sketch.toggleBlend();
+            sketch.toggleBlend();
         } else if (Key.fav1.wasReleased()) {
             sketch.switchFav(0);
         } else if (Key.fav2.wasReleased()) {

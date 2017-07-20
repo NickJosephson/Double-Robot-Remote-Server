@@ -4,9 +4,14 @@ import processing.core.*;
 import javax.swing.*;
 import java.io.*;
 import java.net.*;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
+import org.opencv.core.*;
+import org.opencv.imgproc.Imgproc;
+
 
 /**
  * Created by Nicholas on 2017-05-12.
@@ -19,18 +24,18 @@ public class Sketch extends PApplet implements ControlListener {
 
     private static final int DEFAULT_PORT = 4000;
     private static final int FPS = 15;
-    private static final int WINDOW_WIDTH = (int) (640 * 1.5);
-    private static final int VIDEO_HEIGHT = (int) (480 * 1.5);
-    private static final int WINDOW_HEIGHT = VIDEO_HEIGHT + 100;
+    private static int windowWidth;
+    private static int videoHeight;
+    private static int windowHeight;
     private static final int BACKGROUND_CLR = 0;
     private static final int NUM_FILTERS = 5;
 
     private ServerSocket serverSocket;
     private Map<Character, Key> keyMap;
     private PImage frameToDraw = null;
-    private PImage frameToProcess = null;
     private boolean connected = false;
     private boolean applyFilters = false;
+    private boolean applyBlend = false;
 
     private ControlP5 cp5;
     private Button[] favButtons = new Button[5];
@@ -63,11 +68,18 @@ public class Sketch extends PApplet implements ControlListener {
      *************************************/
 
     public void settings() {
-        size(WINDOW_WIDTH, WINDOW_HEIGHT);
+        fullScreen();
+        //size(windowWidth, windowHeight);
     }
 
     public void setup() {
+        windowHeight = height;
+        videoHeight = windowHeight - 100; //(int) (480 * 1.5);
+        windowWidth = (int) ((videoHeight/480.0) * 640.0); // width; //(int) (640 * 1.5);
+
         frameRate(FPS);
+        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        System.out.println("Using OpenCV 3.20");
 
         setupKeys();
         setupGUI();
@@ -88,9 +100,8 @@ public class Sketch extends PApplet implements ControlListener {
     }
 
     private void drawCameraView() {
-        //draw current frame
         if (frameToDraw != null) {
-            image(frameToDraw, 0, 0, WINDOW_WIDTH, VIDEO_HEIGHT);
+            image(frameToDraw, 0, 0, windowWidth, videoHeight);
         }
     }
 
@@ -110,9 +121,9 @@ public class Sketch extends PApplet implements ControlListener {
         //draw footer dividers
         stroke(255);
         fill(255);
-        line(0, VIDEO_HEIGHT, WINDOW_WIDTH, VIDEO_HEIGHT);
+        line(0, videoHeight, windowWidth, videoHeight);
         for (int i = 1; i < currFilters.length; i++) {
-            line(i * (WINDOW_WIDTH/ currFilters.length) , VIDEO_HEIGHT, i * (WINDOW_WIDTH/ currFilters.length), WINDOW_HEIGHT);
+            line(i * (windowWidth / currFilters.length) , videoHeight, i * (windowWidth / currFilters.length), windowHeight);
         }
     }
 
@@ -120,9 +131,9 @@ public class Sketch extends PApplet implements ControlListener {
         fill(255);
         noStroke();
         rect(
-                (WINDOW_WIDTH/3) + (currFav*((WINDOW_WIDTH/3)/ favButtons.length)),
-                VIDEO_HEIGHT - 20,
-                ((WINDOW_WIDTH/3)/ favButtons.length),
+                (windowWidth /3) + (currFav*((windowWidth /3)/ favButtons.length)),
+                videoHeight - 20,
+                ((windowWidth /3)/ favButtons.length),
                 19
         );
     }
@@ -142,7 +153,7 @@ public class Sketch extends PApplet implements ControlListener {
         cp5.addButton("toggleFiltering")
                 .setBroadcast(false)
                 .setLabel("Filter On /Off")
-                .setPosition(5,VIDEO_HEIGHT - 20)
+                .setPosition(5, videoHeight - 20)
                 .setSize(75,15)
                 .setBroadcast(true)
         ;
@@ -150,7 +161,7 @@ public class Sketch extends PApplet implements ControlListener {
         cp5.addButton("loadFiltersGUI")
                 .setBroadcast(false)
                 .setLabel("Load")
-                .setPosition(WINDOW_WIDTH - 160,VIDEO_HEIGHT - 20)
+                .setPosition(windowWidth - 160, videoHeight - 20)
                 .setSize(75,15)
                 .setBroadcast(true)
         ;
@@ -158,7 +169,7 @@ public class Sketch extends PApplet implements ControlListener {
         cp5.addButton("saveFiltersGUI")
                 .setBroadcast(false)
                 .setLabel("Save")
-                .setPosition(WINDOW_WIDTH - 80,VIDEO_HEIGHT - 20)
+                .setPosition(windowWidth - 80, videoHeight - 20)
                 .setSize(75,15)
                 .setBroadcast(true)
         ;
@@ -175,8 +186,8 @@ public class Sketch extends PApplet implements ControlListener {
             dropdownLists[i] = cp5.addScrollableList(""+i)
                     .setBroadcast(false)
                     .setLabel("Filter "+ (i+1))
-                    .setPosition((i * (WINDOW_WIDTH/ currFilters.length)) + 5, VIDEO_HEIGHT + 5)
-                    .setSize((WINDOW_WIDTH/ currFilters.length) - 10, WINDOW_HEIGHT - VIDEO_HEIGHT - 10)
+                    .setPosition((i * (windowWidth / currFilters.length)) + 5, videoHeight + 5)
+                    .setSize((windowWidth / currFilters.length) - 10, windowHeight - videoHeight - 10)
                     .setBarHeight(20)
                     .setItemHeight(20)
                     .addItems(filterNames)
@@ -190,7 +201,7 @@ public class Sketch extends PApplet implements ControlListener {
         cp5.addButton("setFavorite")
                 .setBroadcast(false)
                 .setLabel("set")
-                .setPosition((WINDOW_WIDTH/3) - 30,VIDEO_HEIGHT - 20)
+                .setPosition((windowWidth /3) - 30, videoHeight - 20)
                 .setSize(20,15)
                 .setBroadcast(true)
         ;
@@ -198,7 +209,7 @@ public class Sketch extends PApplet implements ControlListener {
         cp5.addButton("resetFavorite")
                 .setBroadcast(false)
                 .setLabel("reset")
-                .setPosition((WINDOW_WIDTH/3) - 65,VIDEO_HEIGHT - 20)
+                .setPosition((windowWidth /3) - 65, videoHeight - 20)
                 .setSize(30,15)
                 .setBroadcast(true)
         ;
@@ -207,8 +218,8 @@ public class Sketch extends PApplet implements ControlListener {
             favButtons[i] = cp5.addButton("fav"+i)
                     .setBroadcast(false)
                     .setLabel(""+(i+1))
-                    .setPosition((WINDOW_WIDTH/3) + (i*((WINDOW_WIDTH/3)/ favButtons.length)),VIDEO_HEIGHT - 20)
-                    .setSize(((WINDOW_WIDTH/3)/ favButtons.length),15)
+                    .setPosition((windowWidth /3) + (i*((windowWidth /3)/ favButtons.length)), videoHeight - 20)
+                    .setSize(((windowWidth /3)/ favButtons.length),15)
                     .addListener(this)
                     .setBroadcast(true)
             ;
@@ -251,7 +262,7 @@ public class Sketch extends PApplet implements ControlListener {
                     System.out.println("Couldn't assign filter: " + e.getMessage());
                 }
 
-                currFilters[filterIndex].createUI(filterIndex * (WINDOW_WIDTH / NUM_FILTERS), VIDEO_HEIGHT + 25, (WINDOW_WIDTH / NUM_FILTERS), WINDOW_HEIGHT - VIDEO_HEIGHT);
+                currFilters[filterIndex].createUI(filterIndex * (windowWidth / NUM_FILTERS), videoHeight + 25, (windowWidth / NUM_FILTERS), windowHeight - videoHeight);
             } else {
                 currFilters[filterIndex] = null;
             }
@@ -271,15 +282,22 @@ public class Sketch extends PApplet implements ControlListener {
      *         Frame Processing          *
      *************************************/
 
-    private synchronized void processFrame() {
+    private synchronized Mat processMat(Mat newMat) {
+        Mat src = newMat;
+        Mat dst = new Mat(src.height(), src.width(), CvType.CV_8UC3);
+
         for (Filter currFilter : currFilters) {
             if (currFilter != null) {
-                frameToProcess = currFilter.applyFilter(frameToProcess, null);
+                currFilter.applyFilter(src, dst);
+
+                //swap
+                newMat = src;
+                src = dst;
+                dst = newMat;
             }
         }
 
-        frameToDraw = frameToProcess;
-        frameToProcess = null;
+        return src; //after swap src is the last dst
     }
 
     private Filter getFilterInstance(String filterName) {
@@ -321,9 +339,9 @@ public class Sketch extends PApplet implements ControlListener {
                 } else {
                     dropdownLists[i].setLabel(newFilters[i].getClass().getName());
                     currFilters[i].createUI(
-                            i * (WINDOW_WIDTH / NUM_FILTERS),
-                            VIDEO_HEIGHT + 25, (WINDOW_WIDTH / NUM_FILTERS),
-                            WINDOW_HEIGHT - VIDEO_HEIGHT
+                            i * (windowWidth / NUM_FILTERS),
+                            videoHeight + 25, (windowWidth / NUM_FILTERS),
+                            windowHeight - videoHeight
                     );
                 }
 
@@ -403,17 +421,59 @@ public class Sketch extends PApplet implements ControlListener {
         }
     }
 
-    public synchronized void setFrame(PImage newFrame) {
-        if (applyFilters) {
-            frameToProcess = newFrame;
-            processFrame();
-        } else {
-            frameToDraw = newFrame;
+    public synchronized void setFrame(Mat newMat) {
+        try {
+            if (applyFilters) {
+                if (applyBlend) {
+                    Mat blend = new Mat(newMat.rows(), newMat.cols(), newMat.type());
+                    newMat.copyTo(blend);
+                    PImage tempframeToDraw = toPImage(processMat(newMat));
+                    tempframeToDraw.blend(toPImage(blend), 0,0, frameToDraw.width, frameToDraw.height, 0, 0, frameToDraw.width, frameToDraw.height, PApplet.LIGHTEST);
+                    frameToDraw = tempframeToDraw;
+                } else {
+                    frameToDraw = toPImage(processMat(newMat));
+                }
+            } else {
+                frameToDraw = toPImage(newMat);
+            }
+        } catch (Exception e) {
+            System.out.println("Couldn't set next frame: "+ e.getMessage());
         }
     }
 
     public synchronized void toggleFiltering() {
         applyFilters = !applyFilters;
+    }
+
+    public synchronized void toggleBlend() {
+        applyBlend = !applyBlend;
+    }
+
+    public PImage toPImage(Mat m) throws Exception {
+        PImage img = new PImage(m.width(), m.height());
+
+        Mat m2 = new Mat();
+        if (m.channels() == 3) {
+            Imgproc.cvtColor(m, m2, Imgproc.COLOR_BGR2BGRA); //or Imgproc.COLOR_RGB2RGBA
+        } else if (m.channels() == 1) {
+            Imgproc.cvtColor(m, m2, Imgproc.COLOR_GRAY2BGRA); //or Imgproc.COLOR_RGB2RGBA
+        } else if (m.channels() == 4) {
+            m2 = m;
+        } else {
+            throw new Exception("source mat is not 3 | 4 | 1 channels");
+        }
+
+        int pImageChannels = 4;
+        int numPixels = m2.width()*m2.height();
+        int[] intPixels = new int[numPixels];
+        byte[] matPixels = new byte[numPixels*pImageChannels];
+
+        m2.get(0,0, matPixels);
+        ByteBuffer.wrap(matPixels).order(ByteOrder.LITTLE_ENDIAN).asIntBuffer().get(intPixels);
+        img.pixels = intPixels;
+
+        img.updatePixels();
+        return img;
     }
 
     /*************************************
